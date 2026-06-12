@@ -16,7 +16,6 @@ export function initRouter() {
   const app = document.querySelector("#app");
 
   function navigate() {
-    // Anciennes URLs en #/login → /login
     if (window.location.hash) {
       const legacy = window.location.hash.slice(1).split("#")[0];
       const path = legacy.startsWith("/") ? legacy : `/${legacy}`;
