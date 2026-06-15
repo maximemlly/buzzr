@@ -4,6 +4,7 @@ const express = require("express");
 const cors = require("cors");
 const pool = require("./src/config/db");
 const authRoutes = require("./src/routes/auth");
+const quizRoutes = require("./src/routes/quizzes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -16,6 +17,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/quizzes", quizRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({ message: "Route introuvable" });

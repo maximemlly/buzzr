@@ -75,10 +75,10 @@ async function updateQuiz(req, res) {
     const updatedQuiz = await quizModel.update(req.params.id, {
       title: title.trim(),
       description: description?.trim() || null,
-      isPublished: is_published ? 1 : 0,
+      isPublished: Boolean(is_published),
     });
 
-    res.json({ quiz: updated });
+    res.json({ quiz: updatedQuiz });
   } catch (err) {
     console.error("updateQuiz:", err);
     res.status(500).json({ message: "Erreur serveur" });
@@ -91,6 +91,10 @@ async function deleteQuiz(req, res) {
 
     if (!quiz) {
       return res.status(404).json({ message: "Quiz introuvable" });
+    }
+
+    if (!isOwner(quiz, req.user.id)) {
+      return res.status(403).json({ message: "Accès refusé" });
     }
 
     await quizModel.remove(req.params.id);
@@ -109,6 +113,10 @@ async function addQuestion(req, res) {
       return res.status(404).json({ message: "Quiz introuvable" });
     }
 
+    if (!isOwner(quiz, req.user.id)) {
+      return res.status(403).json({ message: "Accès refusé" });
+    }
+
     const { label, timer_seconds, order_index, answers } = req.body;
 
     if (!label?.trim()) {
@@ -123,11 +131,15 @@ async function addQuestion(req, res) {
 
     const correctCount = answers.filter((answer) => answer.is_correct).length;
     if (correctCount !== 1) {
-      return res
-        .status(400)
-        .json({
-          message: "Une question ne peut avoir qu'une seule bonne réponse",
-        });
+      return res.status(400).json({
+        message: "Une question ne peut avoir qu'une seule bonne réponse",
+      });
+    }
+
+    for (const answer of answers) {
+      if (!answer.label?.trim()) {
+        return res.status(400).json({ message: "Chaque réponse doit avoir un libellé" });
+      }
     }
 
     const question = await quizModel.createQuestion({
@@ -147,7 +159,7 @@ async function addQuestion(req, res) {
       createdAnswers.push(created);
     }
 
-    questionn.answers = createdAnswers;
+    question.answers = createdAnswers;
     res.status(201).json({ question });
   } catch (err) {
     console.error("addQuestion:", err);
