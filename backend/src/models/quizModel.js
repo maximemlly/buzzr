@@ -32,9 +32,9 @@ async function create({ userId, title, description }) {
   return findById(result.insertId);
 }
 
-async function update({ title, description, isPublished }) {
-  const [result] = await pool.execute(
-    `UPDATE quizzes SET title = ?, description = ?, isPublished = ?
+async function update(quizId, { title, description, isPublished }) {
+  await pool.execute(
+    `UPDATE quizzes SET title = ?, description = ?, is_published = ?
         WHERE id = ?`,
     [title, description ?? null, isPublished ? 1 : 0, quizId],
   );
