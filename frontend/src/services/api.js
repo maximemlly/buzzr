@@ -59,3 +59,42 @@ export function getMe() {
     method: "GET",
   });
 }
+
+export function getQuizzes() {
+  return request("/api/quizzes", { method: "GET" });
+}
+
+export function createQuiz(title, description) {
+  return request("/api/quizzes", {
+    method: "POST",
+    body: { title, description },
+  });
+}
+
+export function getQuiz(id) {
+  return request(`/api/quizzes/${id}`, { method: "GET" });
+}
+
+export function updateQuiz(id, { title, description, is_published }) {
+  return request(`/api/quizzes/${id}`, {
+    method: "PUT",
+    body: { title, description, is_published },
+  });
+}
+
+export function deleteQuiz(id) {
+  return request(`/api/quizzes/${id}`, { method: "DELETE" });
+}
+
+export function addQuestion(quizId, question) {
+  return request(`/api/quizzes/${quizId}/questions`, {
+    method: "POST",
+    body: question,
+  });
+}
+
+export function deleteQuestion(quizId, questionId) {
+  return request(`/api/quizzes/${quizId}/questions/${questionId}`, {
+    method: "DELETE",
+  });
+}

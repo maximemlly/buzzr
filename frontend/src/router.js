@@ -3,6 +3,8 @@ import { getPath, navigateTo, onNavigation } from "./utils/navigation.js";
 import { renderLogin } from "./pages/login.js";
 import { renderRegister } from "./pages/register.js";
 import { renderDashboard } from "./pages/dashboard.js";
+import { renderQuizNew } from "./pages/quizNew.js";
+import { renderQuizEditor } from "./pages/quizEditor.js";
 
 const publicPaths = ["/login", "/register"];
 
@@ -10,7 +12,22 @@ const routes = {
   "/login": renderLogin,
   "/register": renderRegister,
   "/dashboard": renderDashboard,
+  "/quiz/new": renderQuizNew,
 };
+
+function resolveRoute(path) {
+  if (routes[path]) {
+    return (app) => routes[path](app);
+  }
+
+  const editMatch = path.match(/^\/quiz\/(\d+)\/edit$/);
+  if (editMatch) {
+    const quizId = editMatch[1];
+    return (app) => renderQuizEditor(app, quizId);
+  }
+
+  return (app) => renderLogin(app);
+}
 
 export function initRouter() {
   const app = document.querySelector("#app");
@@ -40,7 +57,7 @@ export function initRouter() {
       return;
     }
 
-    const render = routes[path] ?? renderLogin;
+    const render = resolveRoute(path);
     app.replaceChildren();
     render(app);
   }
