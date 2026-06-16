@@ -2,17 +2,23 @@ import { getToken } from "./services/api.js";
 import { getPath, navigateTo, onNavigation, getActiveLobby } from "./utils/navigation.js";
 import { renderLogin } from "./pages/login.js";
 import { renderRegister } from "./pages/register.js";
+import { renderVerifyEmail } from "./pages/verifyEmail.js";
+import { renderForgotPassword } from "./pages/forgotPassword.js";
+import { renderResetPassword } from "./pages/resetPassword.js";
 import { renderDashboard } from "./pages/dashboard.js";
 import { renderQuizNew } from "./pages/quizNew.js";
 import { renderQuizEditor } from "./pages/quizEditor.js";
 import { renderJoin } from "./pages/join.js";
 import { renderLobby } from "./pages/lobby.js";
 
-const publicPaths = ["/login", "/register"];
+const publicPaths = ["/login", "/register", "/verify-email", "/forgot-password", "/reset-password"];
 
 const routes = {
   "/login": renderLogin,
   "/register": renderRegister,
+  "/verify-email": renderVerifyEmail,
+  "/forgot-password": renderForgotPassword,
+  "/reset-password": renderResetPassword,
   "/dashboard": renderDashboard,
   "/quiz/new": renderQuizNew,
   "/join": (app) => {

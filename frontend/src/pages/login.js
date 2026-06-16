@@ -1,4 +1,4 @@
-import { login, saveToken } from "../services/api.js";
+import { login, saveToken, resendVerification } from "../services/api.js";
 import { navigateTo } from "../utils/navigation.js";
 
 export function renderLogin(container) {
@@ -35,9 +35,39 @@ export function renderLogin(container) {
   errorEl.className = "error";
   errorEl.hidden = true;
 
+  const resendEl = document.createElement("p");
+  resendEl.className = "auth-hint";
+  resendEl.hidden = true;
+
+  const resendBtn = document.createElement("button");
+  resendBtn.type = "button";
+  resendBtn.textContent = "Renvoyer l'e-mail de vérification";
+  resendBtn.hidden = true;
+  resendBtn.addEventListener("click", async () => {
+    resendBtn.disabled = true;
+    try {
+      const data = await resendVerification(emailInput.value.trim());
+      resendEl.textContent = data.message;
+      resendEl.hidden = false;
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.hidden = false;
+    }
+    resendBtn.disabled = false;
+  });
+
   const submitBtn = document.createElement("button");
   submitBtn.type = "submit";
   submitBtn.textContent = "Se connecter";
+
+  const forgotLink = document.createElement("a");
+  forgotLink.href = "/forgot-password";
+  forgotLink.className = "auth-link";
+  forgotLink.textContent = "Mot de passe oublié ?";
+  forgotLink.addEventListener("click", (e) => {
+    e.preventDefault();
+    navigateTo("/forgot-password");
+  });
 
   const registerLink = document.createElement("a");
   registerLink.href = "/register";
@@ -48,12 +78,23 @@ export function renderLogin(container) {
     navigateTo("/register");
   });
 
-  form.append(emailLabel, passwordLabel, errorEl, submitBtn, registerLink);
+  form.append(
+    emailLabel,
+    passwordLabel,
+    errorEl,
+    resendEl,
+    resendBtn,
+    submitBtn,
+    forgotLink,
+    registerLink,
+  );
   container.append(form);
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     errorEl.hidden = true;
+    resendEl.hidden = true;
+    resendBtn.hidden = true;
 
     const email = emailInput.value.trim();
     const password = passwordInput.value;
@@ -65,6 +106,9 @@ export function renderLogin(container) {
     } catch (err) {
       errorEl.textContent = err.message;
       errorEl.hidden = false;
+      if (err.code === "EMAIL_NOT_VERIFIED") {
+        resendBtn.hidden = false;
+      }
     }
   });
 }

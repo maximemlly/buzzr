@@ -77,6 +77,18 @@ body {
   font-size: 0.9rem;
 }
 
+.success {
+  color: #34d399;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.auth-hint {
+  color: #c4b5fd;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
 .dashboard {
   display: flex;
   flex-direction: column;

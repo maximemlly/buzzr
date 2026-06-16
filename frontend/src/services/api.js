@@ -34,16 +34,19 @@ async function request(path, options = {}) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || "Erreur serveur");
+    const err = new Error(data.message || "Erreur serveur");
+    err.code = data.code;
+    err.email = data.email;
+    throw err;
   }
 
   return data;
 }
 
-export function register(username, email, password) {
+export function register(username, email, password, passwordConfirm) {
   return request("/api/auth/register", {
     method: "POST",
-    body: { username, email, password },
+    body: { username, email, password, passwordConfirm },
   });
 }
 
@@ -51,6 +54,33 @@ export function login(email, password) {
   return request("/api/auth/login", {
     method: "POST",
     body: { email, password },
+  });
+}
+
+export function verifyEmail(token) {
+  return request(`/api/auth/verify-email/${encodeURIComponent(token)}`, {
+    method: "GET",
+  });
+}
+
+export function resendVerification(email) {
+  return request("/api/auth/resend-verification", {
+    method: "POST",
+    body: { email },
+  });
+}
+
+export function forgotPassword(email) {
+  return request("/api/auth/forgot-password", {
+    method: "POST",
+    body: { email },
+  });
+}
+
+export function resetPassword(token, password, passwordConfirm) {
+  return request("/api/auth/reset-password", {
+    method: "POST",
+    body: { token, password, passwordConfirm },
   });
 }
 
