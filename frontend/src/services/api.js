@@ -98,3 +98,14 @@ export function deleteQuestion(quizId, questionId) {
     method: "DELETE",
   });
 }
+
+export function createSession(quizId) {
+  return request("/api/sessions", {
+    method: "POST",
+    body: { quiz_id: quizId },
+  });
+}
+
+export function getSession(code) {
+  return request(`/api/sessions/${code}`, { method: "GET" });
+}

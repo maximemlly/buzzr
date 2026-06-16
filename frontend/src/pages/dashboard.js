@@ -1,5 +1,5 @@
-import { getMe, getQuizzes, deleteQuiz, clearToken } from "../services/api.js";
-import { navigateTo } from "../utils/navigation.js";
+import { getMe, getQuizzes, deleteQuiz, createSession, clearToken } from "../services/api.js";
+import { navigateTo, setActiveLobby } from "../utils/navigation.js";
 
 async function loadQuizzes(listEl, emptyEl, errorEl) {
   listEl.replaceChildren();
@@ -24,9 +24,25 @@ async function loadQuizzes(listEl, emptyEl, errorEl) {
       const actions = document.createElement("div");
       actions.className = "quiz-actions";
 
+      const launchBtn = document.createElement("button");
+      launchBtn.type = "button";
+      launchBtn.className = "btn-launch";
+      launchBtn.textContent = "Lancer une partie";
+      launchBtn.addEventListener("click", async () => {
+        try {
+          const data = await createSession(quiz.id);
+          sessionStorage.setItem("lobbyRole", "host");
+          setActiveLobby(data.session.code);
+          navigateTo(`/lobby/${data.session.code}`, { replace: true });
+        } catch (err) {
+          errorEl.textContent = err.message;
+          errorEl.hidden = false;
+        }
+      });
+
       const editBtn = document.createElement("button");
       editBtn.type = "button";
-      editBtn.textContent = "Éditer";
+      editBtn.textContent = "Modifier";
       editBtn.addEventListener("click", () => {
         navigateTo(`/quiz/${quiz.id}/edit`);
       });
@@ -47,7 +63,7 @@ async function loadQuizzes(listEl, emptyEl, errorEl) {
         }
       });
 
-      actions.append(editBtn, deleteBtn);
+      actions.append(launchBtn, editBtn, deleteBtn);
       li.append(title, actions);
       listEl.append(li);
     }
@@ -71,6 +87,11 @@ export function renderDashboard(container) {
   createBtn.textContent = "Créer un quiz";
   createBtn.addEventListener("click", () => navigateTo("/quiz/new"));
 
+  const joinBtn = document.createElement("button");
+  joinBtn.type = "button";
+  joinBtn.textContent = "Rejoindre une partie";
+  joinBtn.addEventListener("click", () => navigateTo("/join"));
+
   const listEl = document.createElement("ul");
   listEl.className = "quiz-list";
 
@@ -83,11 +104,18 @@ export function renderDashboard(container) {
   errorEl.className = "error";
   errorEl.hidden = true;
 
+  const closedMsg = sessionStorage.getItem("lobbyClosedMessage");
+  if (closedMsg) {
+    errorEl.textContent = closedMsg;
+    errorEl.hidden = false;
+    sessionStorage.removeItem("lobbyClosedMessage");
+  }
+
   const logoutBtn = document.createElement("button");
   logoutBtn.type = "button";
   logoutBtn.textContent = "Déconnexion";
 
-  section.append(greeting, createBtn, listEl, emptyEl, errorEl, logoutBtn);
+  section.append(greeting, createBtn, joinBtn, listEl, emptyEl, errorEl, logoutBtn);
   container.append(section);
 
   getMe()

@@ -28,3 +28,21 @@ export function navigateTo(path, { replace = false } = {}) {
 
   onNavigate?.();
 }
+
+export function setActiveLobby(code) {
+  sessionStorage.setItem("activeLobby", code.toUpperCase());
+}
+
+export function getActiveLobby() {
+  return sessionStorage.getItem("activeLobby");
+}
+
+export function clearLobbySession() {
+  sessionStorage.removeItem("activeLobby");
+  sessionStorage.removeItem("lobbyRole");
+}
+
+export function leaveLobby(path = "/dashboard") {
+  clearLobbySession();
+  navigateTo(path, { replace: true });
+}

@@ -61,7 +61,7 @@ export function renderLogin(container) {
     try {
       const data = await login(email, password);
       saveToken(data.token);
-      navigateTo("/dashboard");
+      navigateTo("/dashboard", { replace: true });
     } catch (err) {
       errorEl.textContent = err.message;
       errorEl.hidden = false;

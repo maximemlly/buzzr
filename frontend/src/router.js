@@ -1,10 +1,12 @@
 import { getToken } from "./services/api.js";
-import { getPath, navigateTo, onNavigation } from "./utils/navigation.js";
+import { getPath, navigateTo, onNavigation, getActiveLobby } from "./utils/navigation.js";
 import { renderLogin } from "./pages/login.js";
 import { renderRegister } from "./pages/register.js";
 import { renderDashboard } from "./pages/dashboard.js";
 import { renderQuizNew } from "./pages/quizNew.js";
 import { renderQuizEditor } from "./pages/quizEditor.js";
+import { renderJoin } from "./pages/join.js";
+import { renderLobby } from "./pages/lobby.js";
 
 const publicPaths = ["/login", "/register"];
 
@@ -13,7 +15,36 @@ const routes = {
   "/register": renderRegister,
   "/dashboard": renderDashboard,
   "/quiz/new": renderQuizNew,
+  "/join": (app) => {
+    const params = new URLSearchParams(window.location.search);
+    renderJoin(app, params.get("code") ?? "");
+  },
 };
+
+function canAccessPath(path) {
+  if (publicPaths.includes(path)) return true;
+  return Boolean(getToken());
+}
+
+function guardPath(path) {
+  const lobbyMatch = path.match(/^\/lobby\/([A-Z0-9]+)$/i);
+  if (lobbyMatch) {
+    const code = lobbyMatch[1].toUpperCase();
+    if (getActiveLobby() !== code) {
+      return { path: "/dashboard", replace: true };
+    }
+  }
+
+  if (!canAccessPath(path)) {
+    return { path: "/login", replace: true };
+  }
+
+  if (getToken() && (path === "/login" || path === "/register")) {
+    return { path: "/dashboard", replace: true };
+  }
+
+  return { path, replace: false };
+}
 
 function resolveRoute(path) {
   if (routes[path]) {
@@ -24,6 +55,12 @@ function resolveRoute(path) {
   if (editMatch) {
     const quizId = editMatch[1];
     return (app) => renderQuizEditor(app, quizId);
+  }
+
+  const lobbyMatch = path.match(/^\/lobby\/([A-Z0-9]+)$/i);
+  if (lobbyMatch) {
+    const code = lobbyMatch[1].toUpperCase();
+    return (app) => renderLobby(app, code);
   }
 
   return (app) => renderLogin(app);
@@ -41,19 +78,10 @@ export function initRouter() {
     }
 
     let path = getPath();
+    const guard = guardPath(path);
 
-    if (window.location.pathname !== path) {
-      navigateTo(path, { replace: true });
-      return;
-    }
-
-    if (!getToken() && !publicPaths.includes(path)) {
-      navigateTo("/login", { replace: true });
-      return;
-    }
-
-    if (getToken() && publicPaths.includes(path)) {
-      navigateTo("/dashboard", { replace: true });
+    if (guard.path !== path || guard.replace) {
+      navigateTo(guard.path, { replace: true });
       return;
     }
 
