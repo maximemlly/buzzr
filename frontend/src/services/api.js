@@ -139,3 +139,36 @@ export function createSession(quizId) {
 export function getSession(code) {
   return request(`/api/sessions/${code}`, { method: "GET" });
 }
+
+export function getAdminUsers(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  return request(`/api/admin/users${query ? `?${query}` : ""}`, { method: "GET" });
+}
+
+export function getAdminUser(id) {
+  return request(`/api/admin/users/${id}`, { method: "GET" });
+}
+
+export function setAdminUserStatus(id, isActive) {
+  return request(`/api/admin/users/${id}/status`, {
+    method: "PATCH",
+    body: { is_active: isActive },
+  });
+}
+
+export function eraseAdminUser(id) {
+  return request(`/api/admin/users/${id}`, { method: "DELETE" });
+}
+
+export function getAdminQuizzes(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  return request(`/api/admin/quizzes${query ? `?${query}` : ""}`, { method: "GET" });
+}
+
+export function unpublishAdminQuiz(id) {
+  return request(`/api/admin/quizzes/${id}/unpublish`, { method: "PATCH" });
+}
+
+export function deleteAdminQuiz(id) {
+  return request(`/api/admin/quizzes/${id}`, { method: "DELETE" });
+}

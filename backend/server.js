@@ -8,6 +8,7 @@ const initSocket = require("./src/config/socket");
 const authRoutes = require("./src/routes/auth");
 const quizRoutes = require("./src/routes/quizzes");
 const sessionRoutes = require("./src/routes/sessions");
+const adminRoutes = require("./src/routes/admin");
 
 const app = express();
 const server = http.createServer(app);
@@ -23,6 +24,7 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/quizzes", quizRoutes);
 app.use("/api/sessions", sessionRoutes);
+app.use("/api/admin", adminRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({ message: "Route introuvable" });

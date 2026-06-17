@@ -1,5 +1,6 @@
 import { login, saveToken, resendVerification } from "../services/api.js";
 import { navigateTo } from "../utils/navigation.js";
+import { createPrivacyLink } from "../components/privacyLink.js";
 
 export function renderLogin(container) {
   container.replaceChildren();
@@ -87,6 +88,7 @@ export function renderLogin(container) {
     submitBtn,
     forgotLink,
     registerLink,
+    createPrivacyLink(),
   );
   container.append(form);
 

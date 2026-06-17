@@ -335,3 +335,175 @@ body {
   color: #c4b5fd;
   font-size: 0.95rem;
 }
+
+.admin {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  max-width: 960px;
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.admin-header h1 {
+  margin: 0;
+}
+
+.admin-header button,
+.admin-tabs button,
+.admin-actions button {
+  padding: 0.45rem 0.75rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--primary);
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.admin-privacy {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  background: rgba(124, 58, 237, 0.15);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #c4b5fd;
+  line-height: 1.4;
+}
+
+.admin-tabs {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.admin-tab {
+  background: var(--surface) !important;
+}
+
+.admin-tab.active {
+  background: var(--primary) !important;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(124, 58, 237, 0.3);
+  vertical-align: top;
+}
+
+.admin-table th {
+  color: #a78bfa;
+  font-weight: 600;
+}
+
+.admin-table tbody tr:hover {
+  background: rgba(45, 31, 94, 0.5);
+}
+
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.admin-muted {
+  color: #a78bfa;
+  font-size: 0.85rem;
+}
+
+.legal-page {
+  width: 100%;
+  max-width: 720px;
+  padding: 2rem;
+  background: var(--surface);
+  border-radius: 12px;
+  line-height: 1.6;
+}
+
+.legal-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.legal-header h1 {
+  margin: 0;
+  font-size: 1.75rem;
+}
+
+.legal-updated {
+  margin: 0;
+  color: #a78bfa;
+  font-size: 0.9rem;
+}
+
+.legal-header button {
+  align-self: flex-start;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--primary);
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 0.5rem;
+}
+
+.legal-intro {
+  margin: 0 0 1.5rem;
+  color: #e9e5f5;
+}
+
+.legal-section {
+  margin-bottom: 1.5rem;
+}
+
+.legal-section h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+  color: #c4b5fd;
+}
+
+.legal-section p {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  color: #e9e5f5;
+}
+
+.consent-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.consent-label input[type="checkbox"] {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
+}
+
+.consent-label .auth-link {
+  display: inline;
+  text-align: left;
+}
+
+.admin-privacy-link {
+  font-size: 0.9rem;
+}

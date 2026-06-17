@@ -1,5 +1,6 @@
 import { register, resendVerification } from "../services/api.js";
 import { navigateTo } from "../utils/navigation.js";
+import { createPrivacyLink } from "../components/privacyLink.js";
 
 export function renderRegister(container) {
   container.replaceChildren();
@@ -50,6 +51,20 @@ export function renderRegister(container) {
   confirmInput.autocomplete = "new-password";
   confirmLabel.append(confirmInput);
 
+  const consentLabel = document.createElement("label");
+  consentLabel.className = "consent-label";
+  const consentInput = document.createElement("input");
+  consentInput.type = "checkbox";
+  consentInput.name = "privacyConsent";
+  consentInput.required = true;
+  const consentText = document.createElement("span");
+  consentText.append(
+    "J'ai lu et j'accepte la ",
+    createPrivacyLink(),
+    ".",
+  );
+  consentLabel.append(consentInput, consentText);
+
   const errorEl = document.createElement("p");
   errorEl.id = "register-error";
   errorEl.className = "error";
@@ -78,6 +93,7 @@ export function renderRegister(container) {
     emailLabel,
     passwordLabel,
     confirmLabel,
+    consentLabel,
     errorEl,
     successEl,
     submitBtn,

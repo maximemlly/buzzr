@@ -92,6 +92,12 @@ export function renderDashboard(container) {
   joinBtn.textContent = "Rejoindre une partie";
   joinBtn.addEventListener("click", () => navigateTo("/join"));
 
+  const adminBtn = document.createElement("button");
+  adminBtn.type = "button";
+  adminBtn.textContent = "Administration";
+  adminBtn.hidden = true;
+  adminBtn.addEventListener("click", () => navigateTo("/admin"));
+
   const listEl = document.createElement("ul");
   listEl.className = "quiz-list";
 
@@ -115,12 +121,15 @@ export function renderDashboard(container) {
   logoutBtn.type = "button";
   logoutBtn.textContent = "Déconnexion";
 
-  section.append(greeting, createBtn, joinBtn, listEl, emptyEl, errorEl, logoutBtn);
+  section.append(greeting, createBtn, joinBtn, adminBtn, listEl, emptyEl, errorEl, logoutBtn);
   container.append(section);
 
   getMe()
     .then((data) => {
       greeting.textContent = `Bonjour, ${data.user.username} !`;
+      if (data.user.role === "admin") {
+        adminBtn.hidden = false;
+      }
       return loadQuizzes(listEl, emptyEl, errorEl);
     })
     .catch(() => {
