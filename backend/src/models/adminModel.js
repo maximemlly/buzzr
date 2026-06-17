@@ -1,7 +1,7 @@
 const pool = require('../config/db');
 
 const MAX_PAGE_SIZE = 100;
-const DEFAULT_PAGE_SIZE = 50;
+const DEFAULT_PAGE_SIZE = 20;
 
 function clampPagination(limit, offset) {
   const safeLimit = Math.min(Math.max(Number(limit) || DEFAULT_PAGE_SIZE, 1), MAX_PAGE_SIZE);
@@ -22,7 +22,7 @@ async function listUsers({ limit, offset }) {
 
   const [[{ total }]] = await pool.execute('SELECT COUNT(*) AS total FROM users');
 
-  return { users: rows, total };
+  return { users: rows, total, limit: safeLimit, offset: safeOffset };
 }
 
 async function listQuizzes({ limit, offset }) {
@@ -39,7 +39,7 @@ async function listQuizzes({ limit, offset }) {
 
   const [[{ total }]] = await pool.execute('SELECT COUNT(*) AS total FROM quizzes');
 
-  return { quizzes: rows, total };
+  return { quizzes: rows, total, limit: safeLimit, offset: safeOffset };
 }
 
 async function setUserActive(userId, isActive) {

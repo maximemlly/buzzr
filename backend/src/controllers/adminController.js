@@ -22,11 +22,17 @@ async function listUsers(req, res) {
   try {
     const limit = req.query.limit;
     const offset = req.query.offset;
-    const { users, total } = await adminModel.listUsers({ limit, offset });
+    const { users, total, limit: safeLimit, offset: safeOffset } = await adminModel.listUsers({
+      limit,
+      offset,
+    });
 
     res.json({
       users: users.map(toPublicUser),
       total,
+      limit: safeLimit,
+      offset: safeOffset,
+      has_more: safeOffset + users.length < total,
       privacy_notice:
         'Les adresses e-mail sont masquées par défaut (minimisation des données, art. 5 RGPD).',
     });
@@ -77,7 +83,7 @@ async function getUser(req, res) {
 
 async function listQuizzes(req, res) {
   try {
-    const { quizzes, total } = await adminModel.listQuizzes({
+    const { quizzes, total, limit, offset } = await adminModel.listQuizzes({
       limit: req.query.limit,
       offset: req.query.offset,
     });
@@ -93,6 +99,9 @@ async function listQuizzes(req, res) {
         created_at: q.created_at,
       })),
       total,
+      limit,
+      offset,
+      has_more: offset + quizzes.length < total,
     });
   } catch (err) {
     console.error('admin listQuizzes:', err);
