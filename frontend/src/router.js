@@ -11,7 +11,10 @@ import { renderQuizEditor } from "./pages/quizEditor.js";
 import { renderJoin } from "./pages/join.js";
 import { renderLobby } from "./pages/lobby.js";
 import { renderAdmin } from "./pages/admin.js";
+import { renderExplore } from "./pages/explore.js";
 import { renderPrivacy } from "./pages/privacy.js";
+import { renderAccountSettings } from "./pages/accountSettings.js";
+import { mountAccountMenu, removeAccountMenu } from "./components/accountMenu.js";
 
 const publicPaths = ["/login", "/register", "/verify-email", "/forgot-password", "/reset-password", "/privacy"];
 
@@ -22,14 +25,22 @@ const routes = {
   "/forgot-password": renderForgotPassword,
   "/reset-password": renderResetPassword,
   "/dashboard": renderDashboard,
+  "/explore": renderExplore,
   "/quiz/new": renderQuizNew,
   "/join": (app) => {
     const params = new URLSearchParams(window.location.search);
     renderJoin(app, params.get("code") ?? "");
   },
   "/admin": renderAdmin,
+  "/account": renderAccountSettings,
   "/privacy": renderPrivacy,
 };
+
+function shouldShowAccountMenu(path) {
+  if (publicPaths.includes(path)) return false;
+  if (path.startsWith("/lobby/")) return false;
+  return Boolean(getToken());
+}
 
 function canAccessPath(path) {
   if (publicPaths.includes(path)) return true;
@@ -98,6 +109,12 @@ export function initRouter() {
     const render = resolveRoute(path);
     app.replaceChildren();
     render(app);
+
+    if (shouldShowAccountMenu(path)) {
+      mountAccountMenu();
+    } else {
+      removeAccountMenu();
+    }
   }
 
   onNavigation(navigate);

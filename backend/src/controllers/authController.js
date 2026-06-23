@@ -287,6 +287,88 @@ async function me(req, res) {
   }
 }
 
+async function updateProfile(req, res) {
+  try {
+    const { username } = req.body;
+
+    if (!username?.trim()) {
+      return res.status(400).json({ message: 'Le nom d\'utilisateur est requis' });
+    }
+
+    const trimmed = username.trim();
+
+    if (trimmed.length < 3) {
+      return res.status(400).json({ message: 'Le pseudo doit faire au moins 3 caractères' });
+    }
+
+    const user = await userModel.findById(req.user.id);
+
+    if (!user || !user.is_active) {
+      return res.status(401).json({ message: 'Utilisateur introuvable' });
+    }
+
+    if (trimmed === user.username) {
+      return res.json({ message: 'Aucune modification', user: toPublicUser(user) });
+    }
+
+    if (await userModel.findByUsernameExceptUserId(trimmed, user.id)) {
+      return res.status(409).json({ message: 'Ce nom d\'utilisateur est déjà pris' });
+    }
+
+    await userModel.updateUsername(user.id, trimmed);
+    const updated = await userModel.findById(user.id);
+
+    res.json({
+      message: 'Pseudo mis à jour',
+      user: toPublicUser(updated),
+      token: signToken(updated),
+    });
+  } catch (err) {
+    console.error('updateProfile:', err);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+}
+
+async function changePassword(req, res) {
+  try {
+    const { currentPassword, newPassword, newPasswordConfirm } = req.body;
+
+    if (!currentPassword) {
+      return res.status(400).json({ message: 'Mot de passe actuel requis' });
+    }
+
+    const passwordError = validatePassword(newPassword, newPasswordConfirm);
+    if (passwordError) {
+      return res.status(400).json({ message: passwordError });
+    }
+
+    const user = await userModel.findAuthById(req.user.id);
+
+    if (!user || !user.is_active) {
+      return res.status(401).json({ message: 'Utilisateur introuvable' });
+    }
+
+    const valid = await bcrypt.compare(currentPassword, user.password_hash);
+
+    if (!valid) {
+      return res.status(401).json({ message: 'Mot de passe actuel incorrect' });
+    }
+
+    const sameAsOld = await bcrypt.compare(newPassword, user.password_hash);
+    if (sameAsOld) {
+      return res.status(400).json({ message: 'Le nouveau mot de passe doit être différent' });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    await userModel.updatePassword(user.id, passwordHash);
+
+    res.json({ message: 'Mot de passe mis à jour' });
+  } catch (err) {
+    console.error('changePassword:', err);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+}
+
 module.exports = {
   register,
   login,
@@ -295,4 +377,6 @@ module.exports = {
   forgotPassword,
   resetPassword,
   me,
+  updateProfile,
+  changePassword,
 };

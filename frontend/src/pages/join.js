@@ -1,6 +1,7 @@
 import { getToken } from "../services/api.js";
 import { getSession } from "../services/api.js";
 import { navigateTo, setActiveLobby } from "../utils/navigation.js";
+import { showBlockedDialog } from "../utils/blockedDialog.js";
 
 export function renderJoin(container, presetCode = "") {
   if (!getToken()) {
@@ -64,6 +65,10 @@ export function renderJoin(container, presetCode = "") {
       setActiveLobby(code);
       navigateTo(`/lobby/${code}`, { replace: true });
     } catch (err) {
+      if (err.code === "QUIZ_OWNER_CANNOT_PLAY") {
+        showBlockedDialog(err.message);
+        return;
+      }
       errorEl.textContent = err.message;
       errorEl.hidden = false;
     }

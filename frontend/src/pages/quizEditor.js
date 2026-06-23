@@ -2,6 +2,7 @@ import {
   getQuiz,
   addQuestion,
   deleteQuestion,
+  updateQuiz,
 } from "../services/api.js";
 import { navigateTo } from "../utils/navigation.js";
 
@@ -52,6 +53,58 @@ export function renderQuizEditor(container, quizId) {
 
   const heading = document.createElement("h1");
   heading.textContent = "Chargement…";
+
+  const settingsForm = document.createElement("form");
+  settingsForm.className = "quiz-settings";
+
+  const settingsTitle = document.createElement("h2");
+  settingsTitle.textContent = "Paramètres du quiz";
+  settingsForm.append(settingsTitle);
+
+  const titleField = document.createElement("label");
+  titleField.textContent = "Titre";
+  const titleInput = document.createElement("input");
+  titleInput.type = "text";
+  titleInput.required = true;
+  titleField.append(titleInput);
+
+  const descField = document.createElement("label");
+  descField.textContent = "Description";
+  const descInput = document.createElement("textarea");
+  descInput.rows = 2;
+  descField.append(descInput);
+
+  const publishLabel = document.createElement("label");
+  publishLabel.className = "consent-label";
+  const publishCheckbox = document.createElement("input");
+  publishCheckbox.type = "checkbox";
+  publishCheckbox.name = "is_published";
+  const publishText = document.createElement("span");
+  publishText.textContent =
+    "Rendre ce quiz public (visible dans l'explorateur et jouable par d'autres utilisateurs)";
+  publishLabel.append(publishCheckbox, publishText);
+
+  const publishHint = document.createElement("p");
+  publishHint.className = "auth-hint";
+  publishHint.textContent =
+    "Un quiz public doit contenir au moins une question. En tant que créateur, vous ne pourrez jamais marquer de points sur vos propres quiz.";
+
+  const settingsError = document.createElement("p");
+  settingsError.className = "error";
+  settingsError.hidden = true;
+
+  const saveSettingsBtn = document.createElement("button");
+  saveSettingsBtn.type = "submit";
+  saveSettingsBtn.textContent = "Enregistrer les paramètres";
+
+  settingsForm.append(
+    titleField,
+    descField,
+    publishLabel,
+    publishHint,
+    settingsError,
+    saveSettingsBtn,
+  );
 
   const questionsTitle = document.createElement("h2");
   questionsTitle.textContent = "Questions";
@@ -127,7 +180,7 @@ export function renderQuizEditor(container, quizId) {
   });
 
   addForm.append(labelField, timerField, answersWrap, errorEl, submitBtn);
-  section.append(heading, questionsTitle, questionsList, addForm, backLink);
+  section.append(heading, settingsForm, questionsTitle, questionsList, addForm, backLink);
   container.append(section);
 
   let currentQuiz = null;
@@ -136,12 +189,34 @@ export function renderQuizEditor(container, quizId) {
     .then((data) => {
       currentQuiz = data.quiz;
       heading.textContent = currentQuiz.title;
+      titleInput.value = currentQuiz.title;
+      descInput.value = currentQuiz.description ?? "";
+      publishCheckbox.checked = Boolean(currentQuiz.is_published);
       return renderQuestions(currentQuiz, questionsList, errorEl);
     })
     .catch((err) => {
       errorEl.textContent = err.message;
       errorEl.hidden = false;
     });
+
+  settingsForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    settingsError.hidden = true;
+
+    try {
+      const data = await updateQuiz(quizId, {
+        title: titleInput.value.trim(),
+        description: descInput.value.trim() || null,
+        is_published: publishCheckbox.checked,
+      });
+      currentQuiz = data.quiz;
+      heading.textContent = currentQuiz.title;
+      publishCheckbox.checked = Boolean(currentQuiz.is_published);
+    } catch (err) {
+      settingsError.textContent = err.message;
+      settingsError.hidden = false;
+    }
+  });
 
   addForm.addEventListener("submit", async (e) => {
     e.preventDefault();

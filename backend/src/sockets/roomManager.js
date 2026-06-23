@@ -4,13 +4,17 @@ function getRoom(code) {
   return rooms.get(code.toUpperCase()) ?? null;
 }
 
-function createRoom({ code, sessionId, quizId, hostId }) {
+function createRoom({ code, sessionId, quizId, hostId, quizOwnerId, isPublished = false }) {
   const room = {
     code: code.toUpperCase(),
     sessionId,
     quizId,
     hostId: Number(hostId),
+    quizOwnerId: Number(quizOwnerId),
+    isPublished: Boolean(isPublished),
+    hostCanPlay: false,
     hostSocketId: null,
+    hostNickname: null,
     status: "waiting",
     quiz: null,
     currentQuestionIndex: 0,
@@ -32,7 +36,10 @@ function removePlayer(room, socketId) {
 }
 
 function getWaitingPlayerList(room) {
-  return [...room.players.values()].map((p) => ({ nickname: p.nickname }));
+  return [...room.players.values()].map((p) => ({
+    nickname: p.nickname,
+    isPlayingHost: room.hostCanPlay && Number(p.userId) === room.hostId,
+  }));
 }
 
 function findPlayerSocketByUserId(room, userId) {
@@ -59,7 +66,13 @@ function getPlayerList(room) {
 }
 
 function getLeaderboard(room) {
-  return getPlayerList(room).sort((a, b) => b.score - a.score);
+  return [...room.players.values()]
+    .map((p) => ({
+      nickname: p.nickname,
+      score: p.score,
+      tieBreaker: p.tieBreaker ?? 0,
+    }))
+    .sort((a, b) => b.score - a.score || b.tieBreaker - a.tieBreaker);
 }
 
 function stripCorrectAnswers(question) {

@@ -1,6 +1,10 @@
 const sessionModel = require("../models/sessionModel");
 const quizModel = require("../models/quizModel");
 const roomManager = require("../sockets/roomManager");
+const jwt = require("jsonwebtoken");
+
+const QUIZ_OWNER_BLOCK_MESSAGE =
+  "Vous êtes le créateur de ce quiz. Pour éviter toute triche, vous ne pouvez pas rejoindre une partie lancée par un autre joueur sur votre propre quiz. Lancez votre propre partie depuis le dashboard si vous souhaitez l'animer.";
 
 function isQuizOwner(quiz, userId) {
   return Number(quiz.user_id) === Number(userId);
@@ -20,7 +24,9 @@ async function createSession(req, res) {
     }
 
     if (!isQuizOwner(quiz, req.user.id)) {
-      return res.status(403).json({ message: "Accès refusé" });
+      if (!quiz.is_published) {
+        return res.status(403).json({ message: "Ce quiz n'est pas public" });
+      }
     }
 
     const fullQuiz = await quizModel.findFullQuiz(quiz_id);
@@ -40,6 +46,8 @@ async function createSession(req, res) {
       sessionId: session.id,
       quizId: quiz.id,
       hostId: req.user.id,
+      quizOwnerId: quiz.user_id,
+      isPublished: Boolean(quiz.is_published),
     });
 
     res.status(201).json({ session });
@@ -58,6 +66,21 @@ async function getSessionByCode(req, res) {
 
     const quiz = await quizModel.findById(session.quiz_id);
     const participants = await sessionModel.getParticipants(session.id);
+
+    const header = req.headers.authorization;
+    if (header?.startsWith("Bearer ") && quiz) {
+      try {
+        const payload = jwt.verify(header.slice(7), process.env.JWT_SECRET);
+        if (isQuizOwner(quiz, payload.id)) {
+          return res.status(403).json({
+            message: QUIZ_OWNER_BLOCK_MESSAGE,
+            code: "QUIZ_OWNER_CANNOT_PLAY",
+          });
+        }
+      } catch {
+        // Token invalide : on renvoie quand même les infos publiques de la session.
+      }
+    }
 
     res.json({
       session: {

@@ -19,6 +19,22 @@ async function findByUsername(username) {
   return rows[0] ?? null;
 }
 
+async function findByUsernameExceptUserId(username, userId) {
+  const [rows] = await pool.execute(
+    'SELECT id FROM users WHERE username = ? AND id != ?',
+    [username, userId]
+  );
+  return rows[0] ?? null;
+}
+
+async function findAuthById(id) {
+  const [rows] = await pool.execute(
+    `SELECT ${USER_FIELDS}, password_hash FROM users WHERE id = ?`,
+    [id]
+  );
+  return rows[0] ?? null;
+}
+
 async function findById(id) {
   const [rows] = await pool.execute(
     `SELECT ${USER_FIELDS} FROM users WHERE id = ?`,
@@ -80,9 +96,15 @@ async function updatePassword(userId, passwordHash) {
   );
 }
 
+async function updateUsername(userId, username) {
+  await pool.execute('UPDATE users SET username = ? WHERE id = ?', [username, userId]);
+}
+
 module.exports = {
   findByEmail,
   findByUsername,
+  findByUsernameExceptUserId,
+  findAuthById,
   findById,
   findByVerificationToken,
   findByResetToken,
@@ -91,4 +113,5 @@ module.exports = {
   verifyEmail,
   setResetToken,
   updatePassword,
+  updateUsername,
 };

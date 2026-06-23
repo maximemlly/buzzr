@@ -19,7 +19,16 @@ async function loadQuizzes(listEl, emptyEl, errorEl) {
 
       const title = document.createElement("span");
       title.className = "quiz-title";
-      title.textContent = quiz.title;
+      const titleText = document.createElement("span");
+      titleText.textContent = quiz.title;
+      title.append(titleText);
+
+      if (quiz.is_published) {
+        const badge = document.createElement("span");
+        badge.className = "quiz-badge quiz-badge-public";
+        badge.textContent = "Public";
+        title.append(badge);
+      }
 
       const actions = document.createElement("div");
       actions.className = "quiz-actions";
@@ -92,11 +101,10 @@ export function renderDashboard(container) {
   joinBtn.textContent = "Rejoindre une partie";
   joinBtn.addEventListener("click", () => navigateTo("/join"));
 
-  const adminBtn = document.createElement("button");
-  adminBtn.type = "button";
-  adminBtn.textContent = "Administration";
-  adminBtn.hidden = true;
-  adminBtn.addEventListener("click", () => navigateTo("/admin"));
+  const exploreBtn = document.createElement("button");
+  exploreBtn.type = "button";
+  exploreBtn.textContent = "Explorer les quiz publics";
+  exploreBtn.addEventListener("click", () => navigateTo("/explore"));
 
   const listEl = document.createElement("ul");
   listEl.className = "quiz-list";
@@ -117,28 +125,16 @@ export function renderDashboard(container) {
     sessionStorage.removeItem("lobbyClosedMessage");
   }
 
-  const logoutBtn = document.createElement("button");
-  logoutBtn.type = "button";
-  logoutBtn.textContent = "Déconnexion";
-
-  section.append(greeting, createBtn, joinBtn, adminBtn, listEl, emptyEl, errorEl, logoutBtn);
+  section.append(greeting, createBtn, exploreBtn, joinBtn, listEl, emptyEl, errorEl);
   container.append(section);
 
   getMe()
     .then((data) => {
       greeting.textContent = `Bonjour, ${data.user.username} !`;
-      if (data.user.role === "admin") {
-        adminBtn.hidden = false;
-      }
       return loadQuizzes(listEl, emptyEl, errorEl);
     })
     .catch(() => {
       clearToken();
       navigateTo("/login");
     });
-
-  logoutBtn.addEventListener("click", () => {
-    clearToken();
-    navigateTo("/login");
-  });
 }

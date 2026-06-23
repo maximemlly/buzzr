@@ -2,21 +2,64 @@ import { getMe } from "../services/api.js";
 import { connectSocket, disconnectSocket } from "../services/socket.js";
 import { navigateTo, setActiveLobby, leaveLobby, clearLobbySession } from "../utils/navigation.js";
 import { renderGameResults } from "../components/gameResults.js";
+import { showBlockedDialog } from "../utils/blockedDialog.js";
 
-function renderNamesList(listEl, participants) {
+function renderLobbyPlayers(listEl, hostBannerEl, { host, participants }) {
+  hostBannerEl.replaceChildren();
+  hostBannerEl.hidden = true;
   listEl.replaceChildren();
+
+  if (host && !host.canPlay) {
+    hostBannerEl.hidden = false;
+    const badge = document.createElement("p");
+    badge.className = "lobby-host-banner";
+
+    const crown = document.createElement("span");
+    crown.className = "lobby-crown";
+    crown.textContent = "👑";
+    crown.setAttribute("aria-hidden", "true");
+
+    const label = document.createElement("span");
+    label.textContent = `Hôte de la partie : ${host.nickname}`;
+
+    badge.append(crown, label);
+    hostBannerEl.append(badge);
+  }
 
   if (!participants.length) {
     const empty = document.createElement("p");
     empty.className = "quiz-empty";
-    empty.textContent = "En attente de joueurs…";
+    if (host?.canPlay) {
+      empty.textContent = "Vous êtes prêt — en attente d'autres joueurs…";
+    } else {
+      empty.textContent = "En attente de joueurs…";
+    }
     listEl.append(empty);
     return;
   }
 
   for (const player of participants) {
     const li = document.createElement("li");
-    li.textContent = player.nickname;
+    li.className = "lobby-player-item";
+
+    if (player.isPlayingHost) {
+      const crown = document.createElement("span");
+      crown.className = "lobby-crown";
+      crown.textContent = "👑";
+      crown.setAttribute("aria-label", "Hôte");
+
+      const name = document.createElement("span");
+      name.textContent = player.nickname;
+
+      const tag = document.createElement("span");
+      tag.className = "lobby-host-tag";
+      tag.textContent = "Hôte";
+
+      li.append(crown, name, tag);
+    } else {
+      li.textContent = player.nickname;
+    }
+
     listEl.append(li);
   }
 }
@@ -36,6 +79,7 @@ export function renderLobby(container, code) {
   const socket = connectSocket();
 
   const isHost = sessionStorage.getItem("lobbyRole") === "host";
+  let hostCanPlay = false;
 
   const section = document.createElement("section");
   section.className = "dashboard";
@@ -53,10 +97,14 @@ export function renderLobby(container, code) {
   const participantsTitle = document.createElement("h2");
   participantsTitle.textContent = "Joueurs connectés";
 
+  const hostBannerEl = document.createElement("div");
+  hostBannerEl.className = "lobby-host-banner-wrap";
+  hostBannerEl.hidden = true;
+
   const participantsList = document.createElement("ul");
   participantsList.className = "quiz-list";
 
-  waitingBlock.append(participantsTitle, participantsList);
+  waitingBlock.append(participantsTitle, hostBannerEl, participantsList);
 
   const startBtn = document.createElement("button");
   startBtn.type = "button";
@@ -152,7 +200,7 @@ export function renderLobby(container, code) {
       if (remaining <= 0) clearTimer();
     }, 1000);
 
-    if (!isHost) {
+    if (!isHost || hostCanPlay) {
       for (const answer of data.question.answers) {
         const btn = document.createElement("button");
         btn.type = "button";
@@ -172,7 +220,7 @@ export function renderLobby(container, code) {
     } else {
       const hostMsg = document.createElement("p");
       hostMsg.className = "quiz-empty";
-      hostMsg.textContent = "Les joueurs répondent sur leur écran…";
+      hostMsg.textContent = "Vous animez la partie — les joueurs répondent sur leur écran…";
       answersEl.append(hostMsg);
     }
   }
@@ -187,27 +235,57 @@ export function renderLobby(container, code) {
     renderLeaderboard(scoreList, leaderboard);
   }
 
-  socket.on("error_message", ({ message }) => {
+  function expelFromLobby(message, { title = "Accès refusé", variant = "error" } = {}) {
+    clearTimer();
+    disconnectSocket();
+    clearLobbySession();
+    showBlockedDialog(message, {
+      title,
+      variant,
+      onClose: () => navigateTo("/dashboard", { replace: true }),
+    });
+  }
+
+  socket.on("join_denied", ({ message }) => {
+    expelFromLobby(message);
+  });
+
+  socket.on("error_message", ({ message, code }) => {
+    if (code === "QUIZ_OWNER_CANNOT_PLAY") {
+      expelFromLobby(message);
+      return;
+    }
     statusEl.textContent = message;
   });
 
-  socket.on("session_update", ({ status, participants }) => {
-    if (status !== "waiting") return;
-    setActiveLobby(code);
-    statusEl.textContent = "En attente du démarrage";
-    showWaiting();
-    renderNamesList(participantsList, participants);
-  });
-
-  socket.on("session_closed", ({ message }) => {
-    disconnectSocket();
-    leaveLobby("/dashboard");
-    if (message) {
-      sessionStorage.setItem("lobbyClosedMessage", message);
+  socket.on("answer_scored", ({ points, totalScore }) => {
+    if (points > 0) {
+      timerEl.textContent = `+${points} pts — total : ${totalScore} pts`;
+    } else {
+      timerEl.textContent = "Mauvaise réponse — en attente des autres…";
     }
   });
 
-  socket.on("game_started", ({ quizTitle, questionCount }) => {
+  socket.on("session_update", ({ status, host, participants, hostCanPlay: canPlay }) => {
+    if (status !== "waiting") return;
+    hostCanPlay = Boolean(canPlay);
+    setActiveLobby(code);
+    statusEl.textContent = hostCanPlay
+      ? "En attente — vous jouerez aussi à ce quiz public"
+      : "En attente du démarrage";
+    showWaiting();
+    renderLobbyPlayers(participantsList, hostBannerEl, { host, participants });
+  });
+
+  socket.on("session_closed", ({ message }) => {
+    expelFromLobby(
+      message || "L'hôte a quitté la partie.",
+      { title: "Partie interrompue", variant: "warning" },
+    );
+  });
+
+  socket.on("game_started", ({ quizTitle, questionCount, hostCanPlay: canPlay }) => {
+    hostCanPlay = Boolean(canPlay);
     statusEl.textContent = `${quizTitle} — ${questionCount} question(s)`;
     waitingBlock.hidden = true;
     startBtn.hidden = true;
@@ -230,7 +308,7 @@ export function renderLobby(container, code) {
     renderGameResults(container, {
       leaderboard,
       username: currentUsername,
-      isHost,
+      isHost: isHost && !hostCanPlay,
       onLeave: () => leaveLobby("/dashboard"),
     });
   });

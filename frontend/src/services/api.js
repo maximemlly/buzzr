@@ -90,8 +90,31 @@ export function getMe() {
   });
 }
 
+export function updateProfile(username) {
+  return request("/api/auth/profile", {
+    method: "PATCH",
+    body: { username },
+  });
+}
+
+export function changePassword(currentPassword, newPassword, newPasswordConfirm) {
+  return request("/api/auth/password", {
+    method: "PATCH",
+    body: { currentPassword, newPassword, newPasswordConfirm },
+  });
+}
+
 export function getQuizzes() {
   return request("/api/quizzes", { method: "GET" });
+}
+
+export function getPublicQuizzes(params = {}) {
+  const query = new URLSearchParams();
+  if (params.limit != null) query.set("limit", params.limit);
+  if (params.offset != null) query.set("offset", params.offset);
+  if (params.search) query.set("search", params.search);
+  const qs = query.toString();
+  return request(`/api/quizzes/public${qs ? `?${qs}` : ""}`, { method: "GET" });
 }
 
 export function createQuiz(title, description) {

@@ -14,6 +14,36 @@ async function listQuizzes(req, res) {
   }
 }
 
+async function listPublicQuizzes(req, res) {
+  try {
+    const { quizzes, total, limit, offset, has_more } =
+      await quizModel.findPublishedPublic({
+        limit: req.query.limit,
+        offset: req.query.offset,
+        search: req.query.search,
+      });
+
+    res.json({
+      quizzes: quizzes.map((quiz) => ({
+        id: quiz.id,
+        title: quiz.title,
+        description: quiz.description,
+        author_id: quiz.author_id,
+        author_username: quiz.author_username,
+        question_count: Number(quiz.question_count) || 0,
+        created_at: quiz.created_at,
+      })),
+      total,
+      limit,
+      offset,
+      has_more,
+    });
+  } catch (err) {
+    console.error("listPublicQuizzes:", err);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+}
+
 async function createQuiz(req, res) {
   try {
     const { title, description } = req.body;
@@ -72,10 +102,20 @@ async function updateQuiz(req, res) {
       return res.status(400).json({ message: "Titre manquant" });
     }
 
+    const wantsPublish = Boolean(is_published);
+    if (wantsPublish) {
+      const questionCount = await quizModel.countQuestions(req.params.id);
+      if (questionCount < 1) {
+        return res.status(400).json({
+          message: "Ajoutez au moins une question avant de rendre le quiz public",
+        });
+      }
+    }
+
     const updatedQuiz = await quizModel.update(req.params.id, {
       title: title.trim(),
       description: description?.trim() || null,
-      isPublished: Boolean(is_published),
+      isPublished: wantsPublish,
     });
 
     res.json({ quiz: updatedQuiz });
@@ -189,6 +229,7 @@ async function deleteQuestion(req, res) {
 }
 module.exports = {
   listQuizzes,
+  listPublicQuizzes,
   createQuiz,
   getQuiz,
   updateQuiz,

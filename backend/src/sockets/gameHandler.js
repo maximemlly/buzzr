@@ -3,8 +3,10 @@ const sessionModel = require("../models/sessionModel");
 const quizModel = require("../models/quizModel");
 const userModel = require("../models/userModel");
 const roomManager = require("./roomManager");
+const { computeSpeedPoints } = require("../utils/scoring");
 
-const QUESTION_BASE_POINTS = 1000;
+const QUIZ_OWNER_BLOCK_MESSAGE =
+  "Vous êtes le créateur de ce quiz. Pour éviter toute triche, vous ne pouvez pas rejoindre une partie lancée par un autre joueur sur votre propre quiz. Lancez votre propre partie depuis le dashboard si vous souhaitez l'animer.";
 
 function getTokenUser(socket) {
   const token = socket.handshake.auth?.token;
@@ -16,10 +18,26 @@ function getTokenUser(socket) {
   }
 }
 
+function computeHostCanPlay(room, userId) {
+  return (
+    room.isPublished &&
+    Number(userId) === room.hostId &&
+    Number(userId) !== room.quizOwnerId
+  );
+}
+
+function canUserEarnPoints(room, userId) {
+  return Number(userId) !== room.quizOwnerId;
+}
+
 function emitSessionUpdate(io, room) {
   io.to(room.code).emit("session_update", {
     code: room.code,
     status: room.status,
+    hostCanPlay: room.hostCanPlay,
+    host: room.hostNickname
+      ? { nickname: room.hostNickname, canPlay: Boolean(room.hostCanPlay) }
+      : null,
     participants: roomManager.getWaitingPlayerList(room),
   });
 }
@@ -63,6 +81,9 @@ function startQuestion(io, room) {
 
   const question = room.quiz.questions[room.currentQuestionIndex];
   room.answersReceived.clear();
+  room.questionStartedAt = Date.now();
+  room.questionDurationMs = (question.timer_seconds ?? 20) * 1000;
+  room.answerSequence = 0;
 
   io.to(room.code).emit("question_started", {
     index: room.currentQuestionIndex,
@@ -78,22 +99,34 @@ function startQuestion(io, room) {
   }, durationMs);
 }
 
-async function registerPlayer(io, socket, room, tokenUser) {
-  if (Number(tokenUser.id) === room.hostId) {
+async function addParticipantToRoom(io, socket, room, tokenUser, { skipHostCheck = false } = {}) {
+  if (Number(tokenUser.id) === room.quizOwnerId) {
+    socket.emit("join_denied", {
+      code: "QUIZ_OWNER_CANNOT_PLAY",
+      message: QUIZ_OWNER_BLOCK_MESSAGE,
+    });
+    return false;
+  }
+
+  if (
+    !skipHostCheck &&
+    Number(tokenUser.id) === room.hostId &&
+    !room.hostCanPlay
+  ) {
     socket.emit("error_message", {
       message: "L'hôte ne peut pas rejoindre en tant que joueur",
     });
-    return;
+    return false;
   }
 
   const user = await userModel.findById(tokenUser.id);
   if (!user) {
     socket.emit("error_message", { message: "Utilisateur introuvable" });
-    return;
+    return false;
   }
 
   const oldSocketId = roomManager.findPlayerSocketByUserId(room, user.id);
-  if (oldSocketId) {
+  if (oldSocketId && oldSocketId !== socket.id) {
     roomManager.removePlayer(room, oldSocketId);
   }
 
@@ -115,11 +148,23 @@ async function registerPlayer(io, socket, room, tokenUser) {
     userId: user.id,
     score: participant.score,
     participantId: participant.id,
+    tieBreaker: 0,
   });
 
-  socket.join(room.code);
+  if (!socket.rooms.has(room.code)) {
+    socket.join(room.code);
+  }
   socket.data.roomCode = room.code;
-  socket.data.role = "player";
+  if (socket.data.role !== "host") {
+    socket.data.role = "player";
+  }
+
+  return true;
+}
+
+async function registerPlayer(io, socket, room, tokenUser) {
+  const added = await addParticipantToRoom(io, socket, room, tokenUser);
+  if (!added) return;
 
   emitSessionUpdate(io, room);
 }
@@ -155,13 +200,18 @@ async function handleLeave(io, socket) {
 
   if (role === "host") {
     room.hostSocketId = null;
-    if (room.status === "waiting") {
-      io.to(room.code).emit("session_closed", {
-        message: "L'hôte a quitté le lobby",
-      });
-      await destroyRoom(room);
-      return;
+    if (room.hostCanPlay) {
+      roomManager.removePlayer(room, socket.id);
     }
+
+    const closedMessage =
+      room.status === "playing"
+        ? "L'hôte a quitté la partie. La session est terminée."
+        : "L'hôte a quitté le lobby. La partie a été annulée.";
+
+    io.to(room.code).emit("session_closed", { message: closedMessage });
+    await destroyRoom(room);
+    return;
   } else {
     roomManager.removePlayer(room, socket.id);
     if (room.status === "waiting") {
@@ -172,6 +222,31 @@ async function handleLeave(io, socket) {
   if (getConnectedCount(io, room.code) === 0) {
     await destroyRoom(room);
   }
+}
+
+async function ensureRoomFromSession(session) {
+  let room = roomManager.getRoom(session.code);
+  const quiz = await quizModel.findById(session.quiz_id);
+
+  if (!quiz) {
+    return null;
+  }
+
+  if (!room) {
+    room = roomManager.createRoom({
+      code: session.code,
+      sessionId: session.id,
+      quizId: session.quiz_id,
+      hostId: session.host_id,
+      quizOwnerId: quiz.user_id,
+      isPublished: Boolean(quiz.is_published),
+    });
+  } else {
+    room.quizOwnerId = Number(quiz.user_id);
+    room.isPublished = Boolean(quiz.is_published);
+  }
+
+  return { room, quiz };
 }
 
 function registerGameHandler(io) {
@@ -190,25 +265,34 @@ function registerGameHandler(io) {
           return;
         }
 
-        let room = roomManager.getRoom(code);
-        if (!room) {
-          room = roomManager.createRoom({
-            code: session.code,
-            sessionId: session.id,
-            quizId: session.quiz_id,
-            hostId: session.host_id,
-          });
+        const context = await ensureRoomFromSession(session);
+        if (!context) {
+          socket.emit("error_message", { message: "Quiz introuvable" });
+          return;
         }
+
+        const { room } = context;
 
         if (role === "host") {
           if (Number(tokenUser.id) !== room.hostId) {
             socket.emit("error_message", { message: "Accès hôte refusé" });
             return;
           }
+
+          room.hostCanPlay = computeHostCanPlay(room, tokenUser.id);
+          const hostUser = await userModel.findById(tokenUser.id);
+          room.hostNickname = hostUser?.username ?? "Hôte";
           room.hostSocketId = socket.id;
           socket.join(room.code);
           socket.data.roomCode = room.code;
           socket.data.role = "host";
+
+          if (room.hostCanPlay) {
+            await addParticipantToRoom(io, socket, room, tokenUser, {
+              skipHostCheck: true,
+            });
+          }
+
           emitSessionUpdate(io, room);
           return;
         }
@@ -228,8 +312,19 @@ function registerGameHandler(io) {
           return;
         }
 
+        const tokenUser = getTokenUser(socket);
+        if (room.hostCanPlay && tokenUser) {
+          await addParticipantToRoom(io, socket, room, tokenUser, {
+            skipHostCheck: true,
+          });
+        }
+
         if (room.players.size < 1) {
-          socket.emit("error_message", { message: "Aucun joueur connecté" });
+          socket.emit("error_message", {
+            message: room.hostCanPlay
+              ? "Impossible de démarrer sans joueur"
+              : "Aucun joueur connecté",
+          });
           return;
         }
 
@@ -250,6 +345,7 @@ function registerGameHandler(io) {
         io.to(room.code).emit("game_started", {
           quizTitle: quiz.title,
           questionCount: quiz.questions.length,
+          hostCanPlay: room.hostCanPlay,
         });
 
         startQuestion(io, room);
@@ -277,12 +373,33 @@ function registerGameHandler(io) {
 
         room.answersReceived.add(socket.id);
 
-        if (Number(answer.is_correct) === 1) {
-          player.score += QUESTION_BASE_POINTS;
+        const earnsPoints =
+          canUserEarnPoints(room, player.userId) &&
+          Number(answer.is_correct) === 1;
+
+        if (earnsPoints) {
+          const durationMs =
+            room.questionDurationMs ??
+            (question.timer_seconds ?? 20) * 1000;
+          const elapsedMs = Date.now() - (room.questionStartedAt ?? Date.now());
+          const remainingMs = Math.max(0, durationMs - elapsedMs);
+          const points = computeSpeedPoints(durationMs, remainingMs);
+
+          room.answerSequence = (room.answerSequence ?? 0) + 1;
+          player.score += points;
+          player.tieBreaker =
+            (player.tieBreaker ?? 0) +
+            remainingMs * 1000 +
+            (1000 - room.answerSequence);
+
           await sessionModel.updateParticipantScore(
             player.participantId,
             player.score,
           );
+
+          socket.emit("answer_scored", { points, totalScore: player.score });
+        } else {
+          socket.emit("answer_scored", { points: 0, totalScore: player.score });
         }
 
         if (room.answersReceived.size >= room.players.size) {

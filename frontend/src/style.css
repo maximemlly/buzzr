@@ -533,6 +533,379 @@ body {
   border: 1px solid var(--primary);
 }
 
+.quiz-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.quiz-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.quiz-badge-public {
+  background: rgba(163, 230, 53, 0.2);
+  color: #a3e635;
+}
+
+.quiz-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: var(--surface);
+  border-radius: 8px;
+}
+
+.quiz-settings label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.quiz-settings input[type="text"],
+.quiz-settings textarea {
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--primary);
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+}
+
+.quiz-settings button[type="submit"] {
+  align-self: flex-start;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--primary);
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.explore {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  max-width: 720px;
+}
+
+.explore-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.explore-header h1 {
+  margin: 0;
+}
+
+.explore-header button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--primary);
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.explore-search label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.explore-search input {
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--primary);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.explore-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.explore-card {
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.explore-card h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.explore-meta {
+  margin: 0;
+  color: #a78bfa;
+  font-size: 0.85rem;
+}
+
+.explore-desc {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #e9e5f5;
+}
+
+.explore-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.explore-owner-note {
+  font-size: 0.85rem;
+  color: #c4b5fd;
+}
+
+.lobby-host-banner-wrap {
+  margin-bottom: 0.5rem;
+}
+
+.lobby-host-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  background: rgba(124, 58, 237, 0.2);
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.lobby-player-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.lobby-crown {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.lobby-host-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(124, 58, 237, 0.35);
+  color: #c4b5fd;
+}
+
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 16, 53, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  z-index: 1000;
+}
+
+.dialog-box {
+  width: 100%;
+  max-width: 420px;
+  padding: 1.5rem;
+  background: var(--surface);
+  border-radius: 12px;
+  border: 1px solid var(--primary);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.dialog-box h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.dialog-box--error h2 {
+  color: var(--error);
+}
+
+.dialog-box--warning h2 {
+  color: #fbbf24;
+}
+
+.dialog-box p {
+  margin: 0;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.dialog-box button {
+  align-self: flex-end;
+  padding: 0.55rem 1.1rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--primary);
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.account-menu {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 900;
+}
+
+.account-menu-trigger {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-menu-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  min-width: 220px;
+  padding: 0.35rem;
+  background: var(--surface);
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.account-menu-dropdown.open {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.account-menu-dropdown button {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.account-menu-dropdown button:hover {
+  background: rgba(124, 58, 237, 0.25);
+}
+
+.account-menu-logout {
+  color: var(--error) !important;
+}
+
+.account-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 480px;
+}
+
+.account-settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.account-settings-header h1 {
+  margin: 0;
+}
+
+.account-settings-header button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--primary);
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.account-settings-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  background: var(--surface);
+  border-radius: 10px;
+}
+
+.account-settings-block h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.account-settings-block label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.account-settings-block input {
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--primary);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.account-settings-block button[type="submit"] {
+  align-self: flex-start;
+  padding: 0.55rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--primary);
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.account-email-value {
+  margin: 0;
+  font-weight: 600;
+  color: #c4b5fd;
+}
+
 .admin-load-more:disabled {
   opacity: 0.5;
   cursor: not-allowed;

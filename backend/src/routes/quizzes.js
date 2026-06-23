@@ -6,6 +6,7 @@ const router = express.Router();
 
 router.use(authenticate);
 
+router.get("/public", quizController.listPublicQuizzes);
 router.get("/", quizController.listQuizzes);
 router.post("/", quizController.createQuiz);
 router.get("/:id", quizController.getQuiz);

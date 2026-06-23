@@ -128,6 +128,66 @@ async function findFullQuiz(quizId) {
   return quiz;
 }
 
+const PUBLIC_PAGE_SIZE = 20;
+
+function escapeLike(value) {
+  return value.replace(/[%_\\]/g, "\\$&");
+}
+
+async function findPublishedPublic({ limit = PUBLIC_PAGE_SIZE, offset = 0, search = "" }) {
+  const safeLimit = Math.min(Math.max(Number(limit) || PUBLIC_PAGE_SIZE, 1), 100);
+  const safeOffset = Math.max(Number(offset) || 0, 0);
+  const trimmedSearch = search?.trim() ?? "";
+
+  let whereClause = "WHERE q.is_published = 1";
+  const params = [];
+
+  if (trimmedSearch) {
+    const pattern = `%${escapeLike(trimmedSearch)}%`;
+    whereClause +=
+      " AND (q.title LIKE ? OR q.description LIKE ? OR u.username LIKE ?)";
+    params.push(pattern, pattern, pattern);
+  }
+
+  const [rows] = await pool.execute(
+    `SELECT q.id, q.title, q.description, q.created_at,
+            u.id AS author_id, u.username AS author_username,
+            (SELECT COUNT(*) FROM questions qq WHERE qq.quiz_id = q.id) AS question_count
+     FROM quizzes q
+     JOIN users u ON u.id = q.user_id
+     ${whereClause}
+     ORDER BY q.created_at DESC
+     LIMIT ${safeLimit} OFFSET ${safeOffset}`,
+    params,
+  );
+
+  const [countRows] = await pool.execute(
+    `SELECT COUNT(*) AS total
+     FROM quizzes q
+     JOIN users u ON u.id = q.user_id
+     ${whereClause}`,
+    params,
+  );
+
+  const total = countRows[0].total;
+
+  return {
+    quizzes: rows,
+    total,
+    limit: safeLimit,
+    offset: safeOffset,
+    has_more: safeOffset + rows.length < total,
+  };
+}
+
+async function countQuestions(quizId) {
+  const [[{ count }]] = await pool.execute(
+    "SELECT COUNT(*) AS count FROM questions WHERE quiz_id = ?",
+    [quizId],
+  );
+  return count;
+}
+
 module.exports = {
   findAllByUserId,
   findById,
@@ -141,4 +201,7 @@ module.exports = {
   findAnswersByQuestionId,
   createAnswer,
   findFullQuiz,
+  findPublishedPublic,
+  countQuestions,
+  PUBLIC_PAGE_SIZE,
 };
