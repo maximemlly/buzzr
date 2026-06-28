@@ -1,6 +1,0 @@
-ALTER TABLE participants
-  ADD COLUMN correct_answers INT NOT NULL DEFAULT 0,
-  ADD COLUMN total_questions INT NOT NULL DEFAULT 0;
-
-ALTER TABLE users
-  ADD COLUMN elo_rating INT NOT NULL DEFAULT 1000;
