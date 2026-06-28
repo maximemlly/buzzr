@@ -1,118 +1,193 @@
-import { getMe, getQuizzes, deleteQuiz, createSession, clearToken } from "../services/api.js";
-import { navigateTo, setActiveLobby } from "../utils/navigation.js";
+import { getQuizzes, getGameHistory, clearToken } from "../services/api.js";
+import { navigateTo } from "../utils/navigation.js";
+import { createAppPage } from "../components/appLayout.js";
+import { createSectionTitle } from "../components/accentTitle.js";
 
-async function loadQuizzes(listEl, emptyEl, errorEl) {
-  listEl.replaceChildren();
-  errorEl.hidden = true;
-  emptyEl.hidden = true;
+function createStatRow(label, value, { extraClass = "" } = {}) {
+  const row = document.createElement("div");
+  row.className = extraClass ? `stat-row ${extraClass}` : "stat-row";
 
-  try {
-    const data = await getQuizzes();
+  const labelEl = document.createElement("span");
+  labelEl.className = "stat-label";
+  labelEl.textContent = label;
 
-    if (data.quizzes.length === 0) {
-      emptyEl.hidden = false;
-      return;
-    }
+  const valueEl = document.createElement("span");
+  valueEl.className = "stat-value";
+  valueEl.textContent = String(value);
 
-    for (const quiz of data.quizzes) {
-      const li = document.createElement("li");
+  row.append(labelEl, valueEl);
+  return row;
+}
 
-      const title = document.createElement("span");
-      title.className = "quiz-title";
-      const titleText = document.createElement("span");
-      titleText.textContent = quiz.title;
-      title.append(titleText);
+function setRankBadge(badgeEl, rank) {
+  badgeEl.textContent = rank;
+  badgeEl.className = "stat-rank-badge";
 
-      if (quiz.is_published) {
-        const badge = document.createElement("span");
-        badge.className = "quiz-badge quiz-badge-public";
-        badge.textContent = "Public";
-        title.append(badge);
-      }
-
-      const actions = document.createElement("div");
-      actions.className = "quiz-actions";
-
-      const launchBtn = document.createElement("button");
-      launchBtn.type = "button";
-      launchBtn.className = "btn-launch";
-      launchBtn.textContent = "Lancer une partie";
-      launchBtn.addEventListener("click", async () => {
-        try {
-          const data = await createSession(quiz.id);
-          sessionStorage.setItem("lobbyRole", "host");
-          setActiveLobby(data.session.code);
-          navigateTo(`/lobby/${data.session.code}`, { replace: true });
-        } catch (err) {
-          errorEl.textContent = err.message;
-          errorEl.hidden = false;
-        }
-      });
-
-      const editBtn = document.createElement("button");
-      editBtn.type = "button";
-      editBtn.textContent = "Modifier";
-      editBtn.addEventListener("click", () => {
-        navigateTo(`/quiz/${quiz.id}/edit`);
-      });
-
-      const deleteBtn = document.createElement("button");
-      deleteBtn.type = "button";
-      deleteBtn.className = "btn-danger";
-      deleteBtn.textContent = "Supprimer";
-      deleteBtn.addEventListener("click", async () => {
-        if (!confirm(`Supprimer le quiz « ${quiz.title} » ?`)) return;
-
-        try {
-          await deleteQuiz(quiz.id);
-          await loadQuizzes(listEl, emptyEl, errorEl);
-        } catch (err) {
-          errorEl.textContent = err.message;
-          errorEl.hidden = false;
-        }
-      });
-
-      actions.append(launchBtn, editBtn, deleteBtn);
-      li.append(title, actions);
-      listEl.append(li);
-    }
-  } catch (err) {
-    errorEl.textContent = err.message;
-    errorEl.hidden = false;
+  if (["F", "E", "D", "C", "B", "A", "S"].includes(rank)) {
+    badgeEl.classList.add(`stat-rank-badge--${rank}`);
   }
+}
+
+function createRatingCard() {
+  const card = document.createElement("div");
+  card.className = "rating-card";
+  card.dataset.rank = "F";
+
+  const title = document.createElement("p");
+  title.className = "rating-card-title";
+  title.textContent = "Classement";
+
+  const body = document.createElement("div");
+  body.className = "rating-card-body";
+
+  const eloBlock = document.createElement("div");
+  eloBlock.className = "rating-card-metric";
+
+  const eloLabel = document.createElement("span");
+  eloLabel.className = "rating-card-label";
+  eloLabel.textContent = "Elo";
+
+  const eloValue = document.createElement("span");
+  eloValue.className = "rating-card-elo";
+  eloValue.textContent = "—";
+
+  eloBlock.append(eloLabel, eloValue);
+
+  const rankBlock = document.createElement("div");
+  rankBlock.className = "rating-card-metric rating-card-metric--rank";
+
+  const rankLabel = document.createElement("span");
+  rankLabel.className = "rating-card-label";
+  rankLabel.textContent = "Rang";
+
+  const rankBadge = document.createElement("span");
+  rankBadge.className = "stat-rank-badge stat-rank-badge--F";
+  rankBadge.textContent = "F";
+
+  rankBlock.append(rankLabel, rankBadge);
+  body.append(eloBlock, rankBlock);
+  card.append(title, body);
+
+  return { card, eloValue, rankBadge };
+}
+
+function updateRatingCard({ card, eloValue, rankBadge }, elo, rank, isUnranked = false) {
+  eloValue.textContent = isUnranked || elo == null ? "—" : String(elo);
+  setRankBadge(rankBadge, rank);
+  card.dataset.rank = rank;
+  card.classList.toggle("rating-card--unranked", isUnranked);
+}
+
+function formatPlayedAt(value) {
+  if (!value) return "";
+  return new Date(value).toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function createHistoryRow(entry) {
+  const row = document.createElement("li");
+  row.className = "history-row";
+
+  const info = document.createElement("div");
+  info.className = "history-row-info";
+
+  const name = document.createElement("span");
+  name.className = "history-row-quiz";
+  name.textContent = entry.quiz_title;
+
+  const date = document.createElement("span");
+  date.className = "history-row-date";
+  date.textContent = formatPlayedAt(entry.played_at);
+
+  info.append(name, date);
+
+  const scoreWrap = document.createElement("div");
+  scoreWrap.className = "history-row-score-wrap";
+
+  const score = document.createElement("span");
+  score.className = "history-row-score";
+  score.textContent = `${entry.score} pts`;
+
+  scoreWrap.append(score);
+
+  if (entry.is_perfect) {
+    const badge = document.createElement("span");
+    badge.className = "history-row-badge";
+    badge.textContent = "Maîtrisé";
+    scoreWrap.append(badge);
+  }
+
+  row.append(info, scoreWrap);
+  return row;
 }
 
 export function renderDashboard(container) {
   container.replaceChildren();
 
-  const section = document.createElement("section");
-  section.className = "dashboard";
+  const { page, main } = createAppPage({ activeNav: "dashboard" });
 
-  const greeting = document.createElement("h1");
-  greeting.textContent = "Chargement…";
+  const layout = document.createElement("div");
+  layout.className = "dashboard-layout";
 
-  const createBtn = document.createElement("button");
-  createBtn.type = "button";
-  createBtn.textContent = "Créer un quiz";
-  createBtn.addEventListener("click", () => navigateTo("/quiz/new"));
+  const statsPanel = document.createElement("aside");
+  statsPanel.className = "panel-card stats-panel";
+
+  const statsTitle = createSectionTitle("Statistiques");
+  const statsList = document.createElement("div");
+  statsList.className = "stats-list";
+
+  const statRows = {
+    created: createStatRow("Quiz créés", 0),
+    played: createStatRow("Parties jouées", 0),
+    mastered: createStatRow("Quiz maîtrisés", 0),
+    victories: createStatRow("Victoires", 0),
+    successRate: createStatRow("Taux de réussite", "—"),
+    streak: createStatRow("Série en cours", 0),
+    best: createStatRow("Meilleur score", 0),
+  };
+  statsList.append(
+    statRows.created,
+    statRows.played,
+    statRows.mastered,
+    statRows.victories,
+    statRows.successRate,
+    statRows.streak,
+    statRows.best,
+  );
+
+  const ratingCard = createRatingCard();
+
+  statsPanel.append(statsTitle, statsList, ratingCard.card);
+
+  const mainCol = document.createElement("div");
+  mainCol.className = "dashboard-main";
+
+  const historyPanel = document.createElement("section");
+  historyPanel.className = "panel-card history-panel";
+
+  const historyTitle = createSectionTitle("Historique");
+  const historyHint = document.createElement("p");
+  historyHint.className = "history-hint";
+  historyHint.textContent = "Vos 5 dernières parties";
+
+  const historyList = document.createElement("ul");
+  historyList.className = "history-list";
+
+  const emptyEl = document.createElement("p");
+  emptyEl.className = "state-empty";
+  emptyEl.textContent = "Aucune partie jouée pour l'instant.";
+  emptyEl.hidden = true;
+
+  historyPanel.append(historyTitle, historyHint, historyList, emptyEl);
 
   const joinBtn = document.createElement("button");
   joinBtn.type = "button";
-  joinBtn.textContent = "Rejoindre une partie";
+  joinBtn.className = "btn btn-primary btn-join";
+  joinBtn.innerHTML = '<span class="btn-join-icon" aria-hidden="true">👤</span> Rejoindre une partie';
   joinBtn.addEventListener("click", () => navigateTo("/join"));
-
-  const exploreBtn = document.createElement("button");
-  exploreBtn.type = "button";
-  exploreBtn.textContent = "Explorer les quiz publics";
-  exploreBtn.addEventListener("click", () => navigateTo("/explore"));
-
-  const listEl = document.createElement("ul");
-  listEl.className = "quiz-list";
-
-  const emptyEl = document.createElement("p");
-  emptyEl.className = "quiz-empty";
-  emptyEl.textContent = "Aucun quiz pour l'instant.";
-  emptyEl.hidden = true;
 
   const errorEl = document.createElement("p");
   errorEl.className = "error";
@@ -125,13 +200,43 @@ export function renderDashboard(container) {
     sessionStorage.removeItem("lobbyClosedMessage");
   }
 
-  section.append(greeting, createBtn, exploreBtn, joinBtn, listEl, emptyEl, errorEl);
-  container.append(section);
+  mainCol.append(historyPanel, joinBtn, errorEl);
+  layout.append(statsPanel, mainCol);
+  main.append(layout);
+  container.append(page);
 
-  getMe()
-    .then((data) => {
-      greeting.textContent = `Bonjour, ${data.user.username} !`;
-      return loadQuizzes(listEl, emptyEl, errorEl);
+  Promise.all([getQuizzes(), getGameHistory(5)])
+    .then(([quizzesData, historyData]) => {
+      const { stats } = historyData;
+
+      statRows.created.querySelector(".stat-value").textContent = String(
+        quizzesData.quizzes.length,
+      );
+      statRows.played.querySelector(".stat-value").textContent = String(stats.games_played);
+      statRows.mastered.querySelector(".stat-value").textContent = String(stats.quizzes_mastered);
+      statRows.victories.querySelector(".stat-value").textContent = String(stats.victories);
+      statRows.successRate.querySelector(".stat-value").textContent =
+        stats.success_rate == null ? "—" : `${stats.success_rate} %`;
+      statRows.streak.querySelector(".stat-value").textContent = String(stats.win_streak);
+      statRows.best.querySelector(".stat-value").textContent = String(stats.best_score);
+
+      updateRatingCard(
+        ratingCard,
+        stats.elo_rating,
+        stats.rank,
+        stats.is_unranked,
+      );
+
+      historyList.replaceChildren();
+      if (historyData.history.length === 0) {
+        emptyEl.hidden = false;
+        return;
+      }
+
+      emptyEl.hidden = true;
+      for (const entry of historyData.history) {
+        historyList.append(createHistoryRow(entry));
+      }
     })
     .catch(() => {
       clearToken();

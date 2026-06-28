@@ -1,5 +1,7 @@
 import { verifyEmail } from "../services/api.js";
 import { navigateTo } from "../utils/navigation.js";
+import { wrapAuthPage } from "../components/authLayout.js";
+import { createAccentTitle } from "../components/accentTitle.js";
 
 export function renderVerifyEmail(container) {
   container.replaceChildren();
@@ -7,9 +9,7 @@ export function renderVerifyEmail(container) {
   const panel = document.createElement("div");
   panel.className = "auth-form";
 
-  const title = document.createElement("h1");
-  title.textContent = "Vérification de l'e-mail";
-  panel.append(title);
+  panel.append(createAccentTitle("Vérification"));
 
   const messageEl = document.createElement("p");
   messageEl.textContent = "Vérification en cours…";
@@ -26,7 +26,7 @@ export function renderVerifyEmail(container) {
   });
   panel.append(loginLink);
 
-  container.append(panel);
+  container.append(wrapAuthPage(panel));
 
   const params = new URLSearchParams(window.location.search);
   const token = params.get("token");

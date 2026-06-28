@@ -4,6 +4,7 @@ const { authenticate } = require("../middleware/auth");
 
 const router = express.Router();
 
+router.get("/history", authenticate, sessionController.getGameHistory);
 router.get("/:code", sessionController.getSessionByCode);
 router.post("/", authenticate, sessionController.createSession);
 

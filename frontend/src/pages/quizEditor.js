@@ -5,6 +5,7 @@ import {
   updateQuiz,
 } from "../services/api.js";
 import { navigateTo } from "../utils/navigation.js";
+import { createAppPage } from "../components/appLayout.js";
 
 async function renderQuestions(quiz, listEl, errorEl) {
   listEl.replaceChildren();
@@ -25,7 +26,7 @@ async function renderQuestions(quiz, listEl, errorEl) {
 
     const deleteBtn = document.createElement("button");
     deleteBtn.type = "button";
-    deleteBtn.className = "btn-danger";
+    deleteBtn.className = "btn btn-danger btn-sm";
     deleteBtn.textContent = "Supprimer";
     deleteBtn.addEventListener("click", async () => {
       if (!confirm("Supprimer cette question ?")) return;
@@ -48,14 +49,22 @@ async function renderQuestions(quiz, listEl, errorEl) {
 export function renderQuizEditor(container, quizId) {
   container.replaceChildren();
 
-  const section = document.createElement("section");
-  section.className = "dashboard";
+  const { page, main } = createAppPage({ activeNav: "quizzes" });
+
+  const hero = document.createElement("section");
+  hero.className = "hero";
 
   const heading = document.createElement("h1");
   heading.textContent = "Chargement…";
 
+  const heroSub = document.createElement("p");
+  heroSub.className = "hero-sub";
+  heroSub.textContent = "Modifiez les paramètres et ajoutez des questions";
+
+  hero.append(heading, heroSub);
+
   const settingsForm = document.createElement("form");
-  settingsForm.className = "quiz-settings";
+  settingsForm.className = "account-settings-block quiz-settings";
 
   const settingsTitle = document.createElement("h2");
   settingsTitle.textContent = "Paramètres du quiz";
@@ -95,6 +104,7 @@ export function renderQuizEditor(container, quizId) {
 
   const saveSettingsBtn = document.createElement("button");
   saveSettingsBtn.type = "submit";
+  saveSettingsBtn.className = "btn btn-primary";
   saveSettingsBtn.textContent = "Enregistrer les paramètres";
 
   settingsForm.append(
@@ -107,13 +117,14 @@ export function renderQuizEditor(container, quizId) {
   );
 
   const questionsTitle = document.createElement("h2");
+  questionsTitle.className = "quiz-section-title";
   questionsTitle.textContent = "Questions";
 
   const questionsList = document.createElement("ul");
   questionsList.className = "quiz-list";
 
   const addForm = document.createElement("form");
-  addForm.className = "auth-form";
+  addForm.className = "account-settings-block panel-form";
 
   const formTitle = document.createElement("h2");
   formTitle.textContent = "Ajouter une question";
@@ -168,20 +179,21 @@ export function renderQuizEditor(container, quizId) {
 
   const submitBtn = document.createElement("button");
   submitBtn.type = "submit";
+  submitBtn.className = "btn btn-primary";
   submitBtn.textContent = "Ajouter la question";
 
   const backLink = document.createElement("a");
   backLink.href = "/dashboard";
   backLink.className = "auth-link";
-  backLink.textContent = "Retour au dashboard";
+  backLink.textContent = "← Retour au dashboard";
   backLink.addEventListener("click", (e) => {
     e.preventDefault();
     navigateTo("/dashboard");
   });
 
   addForm.append(labelField, timerField, answersWrap, errorEl, submitBtn);
-  section.append(heading, settingsForm, questionsTitle, questionsList, addForm, backLink);
-  container.append(section);
+  main.append(hero, settingsForm, questionsTitle, questionsList, addForm, backLink);
+  container.append(page);
 
   let currentQuiz = null;
 

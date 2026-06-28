@@ -163,6 +163,10 @@ export function getSession(code) {
   return request(`/api/sessions/${code}`, { method: "GET" });
 }
 
+export function getGameHistory(limit = 5) {
+  return request(`/api/sessions/history?limit=${limit}`, { method: "GET" });
+}
+
 export function getAdminUsers(params = {}) {
   const query = new URLSearchParams(params).toString();
   return request(`/api/admin/users${query ? `?${query}` : ""}`, { method: "GET" });

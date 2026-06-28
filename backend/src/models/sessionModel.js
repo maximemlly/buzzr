@@ -93,6 +93,95 @@ async function updateParticipantScore(participantId, score) {
   ]);
 }
 
+async function updateParticipantStats(participantId, { correctAnswers, totalQuestions }) {
+  await pool.execute(
+    `UPDATE participants SET correct_answers = ?, total_questions = ? WHERE id = ?`,
+    [correctAnswers, totalQuestions, participantId],
+  );
+}
+
+async function getUserGameHistory(userId, { limit = 5 } = {}) {
+  const safeLimit = Math.min(Math.max(Number(limit) || 5, 1), 50);
+  const [rows] = await pool.execute(
+    `SELECT p.score, p.joined_at, p.correct_answers, p.total_questions,
+            q.title AS quiz_title, q.id AS quiz_id, gs.status
+     FROM participants p
+     INNER JOIN game_sessions gs ON gs.id = p.session_id
+     INNER JOIN quizzes q ON q.id = gs.quiz_id
+     WHERE p.user_id = ? AND gs.status = 'finished'
+     ORDER BY p.joined_at DESC
+     LIMIT ${safeLimit}`,
+    [userId],
+  );
+  return rows;
+}
+
+async function getUserFinishedGameOutcomes(userId) {
+  const [rows] = await pool.execute(
+    `SELECT
+       p.score,
+       p.joined_at,
+       (SELECT MAX(p2.score) FROM participants p2 WHERE p2.session_id = p.session_id) AS session_max_score
+     FROM participants p
+     INNER JOIN game_sessions gs ON gs.id = p.session_id
+     WHERE p.user_id = ? AND gs.status = 'finished'
+     ORDER BY p.joined_at DESC`,
+    [userId],
+  );
+
+  return rows.map((row) => ({
+    isWin: Number(row.score) === Number(row.session_max_score),
+  }));
+}
+
+function computeWinStreak(outcomes) {
+  let streak = 0;
+  for (const outcome of outcomes) {
+    if (!outcome.isWin) break;
+    streak += 1;
+  }
+  return streak;
+}
+
+async function getUserDashboardStats(userId) {
+  const [rows] = await pool.execute(
+    `SELECT
+       COUNT(*) AS games_played,
+       COALESCE(SUM(p.score), 0) AS total_score,
+       COALESCE(MAX(p.score), 0) AS best_score,
+       COALESCE(SUM(p.correct_answers), 0) AS correct_sum,
+       COALESCE(SUM(p.total_questions), 0) AS question_sum,
+       COUNT(DISTINCT CASE
+         WHEN p.total_questions > 0 AND p.correct_answers = p.total_questions
+         THEN gs.quiz_id
+       END) AS quizzes_mastered,
+       SUM(CASE
+         WHEN p.score >= (
+           SELECT MAX(p2.score) FROM participants p2 WHERE p2.session_id = p.session_id
+         ) THEN 1 ELSE 0
+       END) AS victories
+     FROM participants p
+     INNER JOIN game_sessions gs ON gs.id = p.session_id
+     WHERE p.user_id = ? AND gs.status = 'finished'`,
+    [userId],
+  );
+
+  const aggregate = rows[0] ?? {};
+  const questionSum = Number(aggregate.question_sum) || 0;
+  const correctSum = Number(aggregate.correct_sum) || 0;
+  const outcomes = await getUserFinishedGameOutcomes(userId);
+
+  return {
+    games_played: Number(aggregate.games_played) || 0,
+    total_score: Number(aggregate.total_score) || 0,
+    best_score: Number(aggregate.best_score) || 0,
+    quizzes_mastered: Number(aggregate.quizzes_mastered) || 0,
+    victories: Number(aggregate.victories) || 0,
+    success_rate: questionSum > 0 ? Math.round((correctSum / questionSum) * 100) : null,
+    win_streak: computeWinStreak(outcomes),
+  };
+}
+
 module.exports = {
   findById,
   findByCode,
@@ -101,5 +190,8 @@ module.exports = {
   addParticipant,
   getParticipants,
   updateParticipantScore,
+  updateParticipantStats,
   findParticipantBySessionAndUser,
+  getUserGameHistory,
+  getUserDashboardStats,
 };

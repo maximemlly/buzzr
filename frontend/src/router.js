@@ -1,11 +1,13 @@
-import { getToken } from "./services/api.js";
+import { getToken, getMe } from "./services/api.js";
 import { getPath, navigateTo, onNavigation, getActiveLobby } from "./utils/navigation.js";
 import { renderLogin } from "./pages/login.js";
 import { renderRegister } from "./pages/register.js";
 import { renderVerifyEmail } from "./pages/verifyEmail.js";
+import { renderVerifyEmailPending } from "./pages/verifyEmailPending.js";
 import { renderForgotPassword } from "./pages/forgotPassword.js";
 import { renderResetPassword } from "./pages/resetPassword.js";
 import { renderDashboard } from "./pages/dashboard.js";
+import { renderMyQuizzes } from "./pages/myQuizzes.js";
 import { renderQuizNew } from "./pages/quizNew.js";
 import { renderQuizEditor } from "./pages/quizEditor.js";
 import { renderJoin } from "./pages/join.js";
@@ -16,15 +18,17 @@ import { renderPrivacy } from "./pages/privacy.js";
 import { renderAccountSettings } from "./pages/accountSettings.js";
 import { mountAccountMenu, removeAccountMenu } from "./components/accountMenu.js";
 
-const publicPaths = ["/login", "/register", "/verify-email", "/forgot-password", "/reset-password", "/privacy"];
+const publicPaths = ["/login", "/register", "/verify-email", "/verify-email-pending", "/forgot-password", "/reset-password", "/privacy"];
 
 const routes = {
   "/login": renderLogin,
   "/register": renderRegister,
   "/verify-email": renderVerifyEmail,
+  "/verify-email-pending": renderVerifyEmailPending,
   "/forgot-password": renderForgotPassword,
   "/reset-password": renderResetPassword,
   "/dashboard": renderDashboard,
+  "/quizzes": renderMyQuizzes,
   "/explore": renderExplore,
   "/quiz/new": renderQuizNew,
   "/join": (app) => {
@@ -87,6 +91,18 @@ function resolveRoute(path) {
   return (app) => renderLogin(app);
 }
 
+async function refreshAccountMenu() {
+  const slot = document.getElementById("app-profile-slot");
+  if (!slot) return;
+
+  try {
+    const data = await getMe();
+    mountAccountMenu(slot, data.user);
+  } catch {
+    removeAccountMenu();
+  }
+}
+
 export function initRouter() {
   const app = document.querySelector("#app");
 
@@ -108,12 +124,11 @@ export function initRouter() {
 
     const render = resolveRoute(path);
     app.replaceChildren();
+    removeAccountMenu();
     render(app);
 
     if (shouldShowAccountMenu(path)) {
-      mountAccountMenu();
-    } else {
-      removeAccountMenu();
+      refreshAccountMenu();
     }
   }
 

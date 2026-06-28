@@ -1,3 +1,33 @@
+export function fillPodiumList(listEl, leaderboard, { username = "", isHostViewer = false } = {}) {
+  listEl.replaceChildren();
+
+  leaderboard.forEach((entry, index) => {
+    const li = document.createElement("li");
+    const rank = index + 1;
+    li.className = "results-podium-item";
+
+    if (rank === 1) li.classList.add("is-winner");
+    if (!isHostViewer && entry.nickname === username) li.classList.add("is-you");
+    if (rank === 2) li.classList.add("is-second");
+    if (rank === 3) li.classList.add("is-third");
+
+    const rankEl = document.createElement("span");
+    rankEl.className = "results-rank";
+    rankEl.textContent = `#${rank}`;
+
+    const nameEl = document.createElement("span");
+    nameEl.className = "results-name";
+    nameEl.textContent = entry.nickname;
+
+    const scoreEl = document.createElement("span");
+    scoreEl.className = "results-score";
+    scoreEl.textContent = `${entry.score} pts`;
+
+    li.append(rankEl, nameEl, scoreEl);
+    listEl.append(li);
+  });
+}
+
 function getRankMessage(rank, totalPlayers, score) {
   if (rank === 1) {
     return {
@@ -89,38 +119,21 @@ export function renderGameResults(container, { leaderboard, username, isHost, on
 
   const podiumList = document.createElement("ol");
   podiumList.className = "results-podium";
-
-  leaderboard.forEach((entry, index) => {
-    const li = document.createElement("li");
-    const rank = index + 1;
-    li.className = "results-podium-item";
-
-    if (rank === 1) li.classList.add("is-winner");
-    if (!isHost && entry.nickname === username) li.classList.add("is-you");
-    if (rank === 2) li.classList.add("is-second");
-    if (rank === 3) li.classList.add("is-third");
-
-    const rankEl = document.createElement("span");
-    rankEl.className = "results-rank";
-    rankEl.textContent = `#${rank}`;
-
-    const nameEl = document.createElement("span");
-    nameEl.className = "results-name";
-    nameEl.textContent = entry.nickname;
-
-    const scoreEl = document.createElement("span");
-    scoreEl.className = "results-score";
-    scoreEl.textContent = `${entry.score} pts`;
-
-    li.append(rankEl, nameEl, scoreEl);
-    podiumList.append(li);
+  fillPodiumList(podiumList, leaderboard, {
+    username,
+    isHostViewer: isHost,
   });
 
   const leaveBtn = document.createElement("button");
   leaveBtn.type = "button";
+  leaveBtn.className = "btn btn-primary btn-full";
   leaveBtn.textContent = "Retour au dashboard";
   leaveBtn.addEventListener("click", onLeave);
 
   screen.append(banner, podiumTitle, podiumList, leaveBtn);
-  container.append(screen);
+
+  const page = document.createElement("div");
+  page.className = "results-page";
+  page.append(screen);
+  container.append(page);
 }

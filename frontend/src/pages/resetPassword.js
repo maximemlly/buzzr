@@ -1,5 +1,7 @@
 import { resetPassword } from "../services/api.js";
 import { navigateTo } from "../utils/navigation.js";
+import { wrapAuthPage } from "../components/authLayout.js";
+import { createAccentTitle } from "../components/accentTitle.js";
 
 export function renderResetPassword(container) {
   container.replaceChildren();
@@ -10,16 +12,14 @@ export function renderResetPassword(container) {
   const form = document.createElement("form");
   form.className = "auth-form";
 
-  const title = document.createElement("h1");
-  title.textContent = "Nouveau mot de passe";
-  form.append(title);
+  form.append(createAccentTitle("Nouveau mot de passe"));
 
   if (!token) {
     const errorEl = document.createElement("p");
     errorEl.className = "error";
     errorEl.textContent = "Lien invalide : token manquant.";
     form.append(errorEl);
-    container.append(form);
+    container.append(wrapAuthPage(form));
     return;
   }
 
@@ -53,7 +53,8 @@ export function renderResetPassword(container) {
 
   const submitBtn = document.createElement("button");
   submitBtn.type = "submit";
-  submitBtn.textContent = "Enregistrer";
+  submitBtn.className = "btn btn-primary btn-full";
+  submitBtn.textContent = "Valider";
 
   const backLink = document.createElement("a");
   backLink.href = "/login";
@@ -65,7 +66,7 @@ export function renderResetPassword(container) {
   });
 
   form.append(passwordLabel, confirmLabel, errorEl, successEl, submitBtn, backLink);
-  container.append(form);
+  container.append(wrapAuthPage(form));
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();

@@ -1,7 +1,9 @@
 const sessionModel = require("../models/sessionModel");
 const quizModel = require("../models/quizModel");
+const userModel = require("../models/userModel");
 const roomManager = require("../sockets/roomManager");
 const jwt = require("jsonwebtoken");
+const { resolvePlayerRating } = require("../utils/elo");
 
 const QUIZ_OWNER_BLOCK_MESSAGE =
   "Vous êtes le créateur de ce quiz. Pour éviter toute triche, vous ne pouvez pas rejoindre une partie lancée par un autre joueur sur votre propre quiz. Lancez votre propre partie depuis le dashboard si vous souhaitez l'animer.";
@@ -96,4 +98,43 @@ async function getSessionByCode(req, res) {
   }
 }
 
-module.exports = { createSession, getSessionByCode };
+async function getGameHistory(req, res) {
+  try {
+    const limit = Number(req.query.limit) || 5;
+    const [history, stats, eloRating] = await Promise.all([
+      sessionModel.getUserGameHistory(req.user.id, { limit }),
+      sessionModel.getUserDashboardStats(req.user.id),
+      userModel.getEloRating(req.user.id),
+    ]);
+
+    const gamesPlayed = Number(stats.games_played) || 0;
+    const rating = resolvePlayerRating(eloRating, gamesPlayed);
+
+    res.json({
+      history: history.map((row) => ({
+        quiz_id: row.quiz_id,
+        quiz_title: row.quiz_title,
+        score: row.score,
+        played_at: row.joined_at,
+        status: row.status,
+        is_perfect: row.total_questions > 0 && row.correct_answers === row.total_questions,
+      })),
+      stats: {
+        games_played: gamesPlayed,
+        quizzes_mastered: Number(stats.quizzes_mastered) || 0,
+        best_score: Number(stats.best_score) || 0,
+        victories: Number(stats.victories) || 0,
+        success_rate: stats.success_rate,
+        win_streak: Number(stats.win_streak) || 0,
+        elo_rating: rating.elo_rating,
+        rank: rating.rank,
+        is_unranked: rating.is_unranked,
+      },
+    });
+  } catch (err) {
+    console.error("getGameHistory:", err);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+}
+
+module.exports = { createSession, getSessionByCode, getGameHistory };

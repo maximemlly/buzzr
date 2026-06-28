@@ -1,6 +1,10 @@
-import { register, resendVerification } from "../services/api.js";
+import { register } from "../services/api.js";
 import { navigateTo } from "../utils/navigation.js";
 import { createPrivacyLink } from "../components/privacyLink.js";
+import { wrapAuthPage } from "../components/authLayout.js";
+import { createAccentTitle } from "../components/accentTitle.js";
+import { createPlaceholderField } from "../components/authField.js";
+import { navigateToVerifyEmailPending } from "./verifyEmailPending.js";
 
 export function renderRegister(container) {
   container.replaceChildren();
@@ -9,47 +13,22 @@ export function renderRegister(container) {
   form.id = "register-form";
   form.className = "auth-form";
 
-  const title = document.createElement("h1");
-  title.textContent = "Créer un compte";
-  form.append(title);
+  form.append(createAccentTitle("Inscription"));
 
-  const usernameLabel = document.createElement("label");
-  usernameLabel.textContent = "Nom d'utilisateur";
-  const usernameInput = document.createElement("input");
-  usernameInput.type = "text";
-  usernameInput.name = "username";
-  usernameInput.required = true;
-  usernameInput.autocomplete = "username";
-  usernameLabel.append(usernameInput);
-
-  const emailLabel = document.createElement("label");
-  emailLabel.textContent = "Adresse e-mail";
-  const emailInput = document.createElement("input");
-  emailInput.type = "email";
-  emailInput.name = "email";
-  emailInput.required = true;
-  emailInput.autocomplete = "email";
-  emailLabel.append(emailInput);
-
-  const passwordLabel = document.createElement("label");
-  passwordLabel.textContent = "Mot de passe";
-  const passwordInput = document.createElement("input");
-  passwordInput.type = "password";
-  passwordInput.name = "password";
-  passwordInput.required = true;
-  passwordInput.minLength = 8;
-  passwordInput.autocomplete = "new-password";
-  passwordLabel.append(passwordInput);
-
-  const confirmLabel = document.createElement("label");
-  confirmLabel.textContent = "Confirmer le mot de passe";
-  const confirmInput = document.createElement("input");
-  confirmInput.type = "password";
-  confirmInput.name = "passwordConfirm";
-  confirmInput.required = true;
-  confirmInput.minLength = 8;
-  confirmInput.autocomplete = "new-password";
-  confirmLabel.append(confirmInput);
+  const usernameInput = createPlaceholderField("text", "username", "Nom d'utilisateur", {
+    autocomplete: "username",
+  });
+  const emailInput = createPlaceholderField("email", "email", "Adresse e-mail", {
+    autocomplete: "email",
+  });
+  const passwordInput = createPlaceholderField("password", "password", "Mot de passe", {
+    autocomplete: "new-password",
+    minLength: 8,
+  });
+  const confirmInput = createPlaceholderField("password", "passwordConfirm", "Confirmer mot de passe", {
+    autocomplete: "new-password",
+    minLength: 8,
+  });
 
   const consentLabel = document.createElement("label");
   consentLabel.className = "consent-label";
@@ -58,11 +37,7 @@ export function renderRegister(container) {
   consentInput.name = "privacyConsent";
   consentInput.required = true;
   const consentText = document.createElement("span");
-  consentText.append(
-    "J'ai lu et j'accepte la ",
-    createPrivacyLink(),
-    ".",
-  );
+  consentText.append("J'accepte la ", createPrivacyLink(), ".");
   consentLabel.append(consentInput, consentText);
 
   const errorEl = document.createElement("p");
@@ -70,44 +45,35 @@ export function renderRegister(container) {
   errorEl.className = "error";
   errorEl.hidden = true;
 
-  const successEl = document.createElement("p");
-  successEl.id = "register-success";
-  successEl.className = "success";
-  successEl.hidden = true;
-
   const submitBtn = document.createElement("button");
   submitBtn.type = "submit";
-  submitBtn.textContent = "S'inscrire";
+  submitBtn.className = "btn btn-primary btn-full";
+  submitBtn.textContent = "Valider";
 
-  const backLink = document.createElement("a");
-  backLink.href = "/login";
-  backLink.className = "auth-link";
-  backLink.textContent = "Déjà un compte ? Se connecter";
-  backLink.addEventListener("click", (e) => {
+  const loginLink = document.createElement("p");
+  loginLink.className = "auth-footer-link";
+  loginLink.innerHTML = "Déjà inscrit ? <a href=\"/login\">Connectez-vous ici.</a>";
+  loginLink.querySelector("a").addEventListener("click", (e) => {
     e.preventDefault();
     navigateTo("/login");
   });
 
   form.append(
-    usernameLabel,
-    emailLabel,
-    passwordLabel,
-    confirmLabel,
+    usernameInput,
+    emailInput,
+    passwordInput,
+    confirmInput,
     consentLabel,
     errorEl,
-    successEl,
     submitBtn,
-    backLink,
+    loginLink,
   );
-  container.append(form);
+  container.append(wrapAuthPage(form));
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     errorEl.hidden = true;
-    successEl.hidden = true;
 
-    const username = usernameInput.value.trim();
-    const email = emailInput.value.trim();
     const password = passwordInput.value;
     const passwordConfirm = confirmInput.value;
 
@@ -118,34 +84,16 @@ export function renderRegister(container) {
     }
 
     try {
-      const data = await register(username, email, password, passwordConfirm);
-      form.replaceChildren();
-      const doneTitle = document.createElement("h1");
-      doneTitle.textContent = "Vérifiez votre e-mail";
-      const doneText = document.createElement("p");
-      doneText.textContent = data.message;
-      const resendBtn = document.createElement("button");
-      resendBtn.type = "button";
-      resendBtn.textContent = "Renvoyer l'e-mail";
-      resendBtn.addEventListener("click", async () => {
-        resendBtn.disabled = true;
-        try {
-          const res = await resendVerification(email);
-          doneText.textContent = res.message;
-        } catch (err) {
-          doneText.textContent = err.message;
-        }
-        resendBtn.disabled = false;
+      const data = await register(
+        usernameInput.value.trim(),
+        emailInput.value.trim(),
+        password,
+        passwordConfirm,
+      );
+      navigateToVerifyEmailPending(emailInput.value.trim().toLowerCase(), {
+        message: data.message,
+        replace: true,
       });
-      const loginLink = document.createElement("a");
-      loginLink.href = "/login";
-      loginLink.className = "auth-link";
-      loginLink.textContent = "Aller à la connexion";
-      loginLink.addEventListener("click", (ev) => {
-        ev.preventDefault();
-        navigateTo("/login");
-      });
-      form.append(doneTitle, doneText, resendBtn, loginLink);
     } catch (err) {
       errorEl.textContent = err.message;
       errorEl.hidden = false;

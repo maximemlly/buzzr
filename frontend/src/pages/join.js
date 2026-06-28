@@ -2,6 +2,7 @@ import { getToken } from "../services/api.js";
 import { getSession } from "../services/api.js";
 import { navigateTo, setActiveLobby } from "../utils/navigation.js";
 import { showBlockedDialog } from "../utils/blockedDialog.js";
+import { createAppPage } from "../components/appLayout.js";
 
 export function renderJoin(container, presetCode = "") {
   if (!getToken()) {
@@ -11,17 +12,23 @@ export function renderJoin(container, presetCode = "") {
 
   container.replaceChildren();
 
-  const form = document.createElement("form");
-  form.className = "auth-form";
+  const { page, main } = createAppPage({ showNav: false });
+  main.classList.add("app-main--centered");
+
+  const hero = document.createElement("section");
+  hero.className = "hero";
 
   const title = document.createElement("h1");
   title.textContent = "Rejoindre une partie";
-  form.append(title);
 
   const hint = document.createElement("p");
-  hint.className = "quiz-empty";
-  hint.textContent = "Tu rejoindras la partie avec ton nom de compte.";
-  form.append(hint);
+  hint.className = "hero-sub";
+  hint.textContent = "Entrez le code à 6 caractères partagé par l'hôte";
+
+  hero.append(title, hint);
+
+  const form = document.createElement("form");
+  form.className = "panel-form";
 
   const codeLabel = document.createElement("label");
   codeLabel.textContent = "Code de la partie";
@@ -39,19 +46,21 @@ export function renderJoin(container, presetCode = "") {
 
   const submitBtn = document.createElement("button");
   submitBtn.type = "submit";
-  submitBtn.textContent = "Rejoindre";
+  submitBtn.className = "btn btn-primary btn-full";
+  submitBtn.textContent = "Rejoindre la partie";
 
   const backLink = document.createElement("a");
   backLink.href = "/dashboard";
   backLink.className = "auth-link";
-  backLink.textContent = "Retour au dashboard";
+  backLink.textContent = "← Retour au dashboard";
   backLink.addEventListener("click", (e) => {
     e.preventDefault();
     navigateTo("/dashboard");
   });
 
   form.append(codeLabel, errorEl, submitBtn, backLink);
-  container.append(form);
+  main.append(hero, form);
+  container.append(page);
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();

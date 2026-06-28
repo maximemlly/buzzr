@@ -6,25 +6,30 @@ import {
   clearToken,
 } from "../services/api.js";
 import { navigateTo } from "../utils/navigation.js";
+import { createAppPage } from "../components/appLayout.js";
 
 export function renderAccountSettings(container) {
   container.replaceChildren();
 
-  const section = document.createElement("section");
-  section.className = "account-settings";
+  const { page, main } = createAppPage();
 
-  const header = document.createElement("div");
-  header.className = "account-settings-header";
+  const hero = document.createElement("section");
+  hero.className = "hero";
 
   const title = document.createElement("h1");
   title.textContent = "Paramètres du compte";
 
+  const sub = document.createElement("p");
+  sub.className = "hero-sub";
+  sub.textContent = "Gérez votre pseudo et votre mot de passe";
+
+  hero.append(title, sub);
+
   const backBtn = document.createElement("button");
   backBtn.type = "button";
-  backBtn.textContent = "Retour au dashboard";
+  backBtn.className = "btn btn-secondary";
+  backBtn.textContent = "← Retour au dashboard";
   backBtn.addEventListener("click", () => navigateTo("/dashboard"));
-
-  header.append(title, backBtn);
 
   const emailBlock = document.createElement("div");
   emailBlock.className = "account-settings-block";
@@ -67,6 +72,7 @@ export function renderAccountSettings(container) {
 
   const usernameSubmit = document.createElement("button");
   usernameSubmit.type = "submit";
+  usernameSubmit.className = "btn btn-primary";
   usernameSubmit.textContent = "Enregistrer le pseudo";
 
   usernameForm.append(
@@ -119,6 +125,7 @@ export function renderAccountSettings(container) {
 
   const passwordSubmit = document.createElement("button");
   passwordSubmit.type = "submit";
+  passwordSubmit.className = "btn btn-primary";
   passwordSubmit.textContent = "Changer le mot de passe";
 
   passwordForm.append(
@@ -131,8 +138,8 @@ export function renderAccountSettings(container) {
     passwordSubmit,
   );
 
-  section.append(header, emailBlock, usernameForm, passwordForm);
-  container.append(section);
+  main.append(hero, backBtn, emailBlock, usernameForm, passwordForm);
+  container.append(page);
 
   getMe()
     .then((data) => {

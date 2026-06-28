@@ -11,6 +11,7 @@ import {
 } from "../services/api.js";
 import { navigateTo } from "../utils/navigation.js";
 import { createPrivacyLink } from "../components/privacyLink.js";
+import { createAppPage } from "../components/appLayout.js";
 
 const PAGE_SIZE = 20;
 
@@ -304,21 +305,25 @@ function renderQuizzesPanel(container, errorEl, onModeration) {
 export function renderAdmin(container) {
   container.replaceChildren();
 
-  const section = document.createElement("section");
-  section.className = "admin";
+  const { page, main } = createAppPage();
 
-  const header = document.createElement("div");
-  header.className = "admin-header";
+  const hero = document.createElement("section");
+  hero.className = "hero";
 
   const title = document.createElement("h1");
   title.textContent = "Administration";
 
+  const sub = document.createElement("p");
+  sub.className = "hero-sub";
+  sub.textContent = "Modération des utilisateurs et des quiz publics";
+
+  hero.append(title, sub);
+
   const backBtn = document.createElement("button");
   backBtn.type = "button";
-  backBtn.textContent = "Retour au dashboard";
+  backBtn.className = "btn btn-secondary";
+  backBtn.textContent = "← Retour au dashboard";
   backBtn.addEventListener("click", () => navigateTo("/dashboard"));
-
-  header.append(title, backBtn);
 
   const gdprNotice = document.createElement("p");
   gdprNotice.className = "admin-privacy";
@@ -334,12 +339,16 @@ export function renderAdmin(container) {
   const panel = document.createElement("div");
   panel.className = "admin-panel";
 
+  const adminWrap = document.createElement("div");
+  adminWrap.className = "admin";
+
   const errorEl = document.createElement("p");
   errorEl.className = "error";
   errorEl.hidden = true;
 
-  section.append(header, gdprNotice, privacyLink, tabs, panel, errorEl);
-  container.append(section);
+  adminWrap.append(gdprNotice, privacyLink, tabs, panel, errorEl);
+  main.append(hero, backBtn, adminWrap);
+  container.append(page);
 
   let activeTab = "users";
   let panelController = null;

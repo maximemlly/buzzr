@@ -1,6 +1,10 @@
-import { login, saveToken, resendVerification } from "../services/api.js";
+import { login, saveToken } from "../services/api.js";
 import { navigateTo } from "../utils/navigation.js";
 import { createPrivacyLink } from "../components/privacyLink.js";
+import { wrapAuthPage } from "../components/authLayout.js";
+import { createAccentTitle } from "../components/accentTitle.js";
+import { createPlaceholderField } from "../components/authField.js";
+import { navigateToVerifyEmailPending } from "./verifyEmailPending.js";
 
 export function renderLogin(container) {
   container.replaceChildren();
@@ -9,108 +13,72 @@ export function renderLogin(container) {
   form.id = "login-form";
   form.className = "auth-form";
 
-  const title = document.createElement("h1");
-  title.textContent = "Connexion";
-  form.append(title);
+  form.append(createAccentTitle("Connexion"));
 
-  const emailLabel = document.createElement("label");
-  emailLabel.textContent = "Adresse e-mail";
-  const emailInput = document.createElement("input");
-  emailInput.type = "email";
-  emailInput.name = "email";
-  emailInput.required = true;
-  emailInput.autocomplete = "email";
-  emailLabel.append(emailInput);
-
-  const passwordLabel = document.createElement("label");
-  passwordLabel.textContent = "Mot de passe";
-  const passwordInput = document.createElement("input");
-  passwordInput.type = "password";
-  passwordInput.name = "password";
-  passwordInput.required = true;
-  passwordInput.autocomplete = "current-password";
-  passwordLabel.append(passwordInput);
+  const emailInput = createPlaceholderField("email", "email", "Adresse e-mail", {
+    autocomplete: "email",
+  });
+  const passwordInput = createPlaceholderField("password", "password", "Mot de passe", {
+    autocomplete: "current-password",
+  });
 
   const errorEl = document.createElement("p");
   errorEl.id = "login-error";
   errorEl.className = "error";
   errorEl.hidden = true;
 
-  const resendEl = document.createElement("p");
-  resendEl.className = "auth-hint";
-  resendEl.hidden = true;
-
-  const resendBtn = document.createElement("button");
-  resendBtn.type = "button";
-  resendBtn.textContent = "Renvoyer l'e-mail de vérification";
-  resendBtn.hidden = true;
-  resendBtn.addEventListener("click", async () => {
-    resendBtn.disabled = true;
-    try {
-      const data = await resendVerification(emailInput.value.trim());
-      resendEl.textContent = data.message;
-      resendEl.hidden = false;
-    } catch (err) {
-      errorEl.textContent = err.message;
-      errorEl.hidden = false;
-    }
-    resendBtn.disabled = false;
-  });
-
   const submitBtn = document.createElement("button");
   submitBtn.type = "submit";
-  submitBtn.textContent = "Se connecter";
+  submitBtn.className = "btn btn-primary btn-full";
+  submitBtn.textContent = "Valider";
+
+  const registerLink = document.createElement("p");
+  registerLink.className = "auth-footer-link";
+  registerLink.innerHTML = "Nouveau joueur ? <a href=\"/register\">Inscrivez-vous ici.</a>";
+  registerLink.querySelector("a").addEventListener("click", (e) => {
+    e.preventDefault();
+    navigateTo("/register");
+  });
 
   const forgotLink = document.createElement("a");
   forgotLink.href = "/forgot-password";
-  forgotLink.className = "auth-link";
+  forgotLink.className = "auth-link-subtle";
   forgotLink.textContent = "Mot de passe oublié ?";
   forgotLink.addEventListener("click", (e) => {
     e.preventDefault();
     navigateTo("/forgot-password");
   });
 
-  const registerLink = document.createElement("a");
-  registerLink.href = "/register";
-  registerLink.className = "auth-link";
-  registerLink.textContent = "Pas encore de compte ? S'inscrire";
-  registerLink.addEventListener("click", (e) => {
-    e.preventDefault();
-    navigateTo("/register");
-  });
+  const privacyWrap = document.createElement("p");
+  privacyWrap.className = "auth-privacy";
+  privacyWrap.append(createPrivacyLink());
 
   form.append(
-    emailLabel,
-    passwordLabel,
+    emailInput,
+    passwordInput,
     errorEl,
-    resendEl,
-    resendBtn,
     submitBtn,
-    forgotLink,
     registerLink,
-    createPrivacyLink(),
+    forgotLink,
+    privacyWrap,
   );
-  container.append(form);
+  container.append(wrapAuthPage(form));
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     errorEl.hidden = true;
-    resendEl.hidden = true;
-    resendBtn.hidden = true;
-
-    const email = emailInput.value.trim();
-    const password = passwordInput.value;
 
     try {
-      const data = await login(email, password);
+      const data = await login(emailInput.value.trim(), passwordInput.value);
       saveToken(data.token);
       navigateTo("/dashboard", { replace: true });
     } catch (err) {
+      if (err.code === "EMAIL_NOT_VERIFIED" && err.email) {
+        navigateToVerifyEmailPending(err.email, { message: err.message });
+        return;
+      }
       errorEl.textContent = err.message;
       errorEl.hidden = false;
-      if (err.code === "EMAIL_NOT_VERIFIED") {
-        resendBtn.hidden = false;
-      }
     }
   });
 }

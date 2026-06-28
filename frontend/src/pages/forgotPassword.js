@@ -1,5 +1,7 @@
 import { forgotPassword } from "../services/api.js";
 import { navigateTo } from "../utils/navigation.js";
+import { wrapAuthPage } from "../components/authLayout.js";
+import { createAccentTitle } from "../components/accentTitle.js";
 
 export function renderForgotPassword(container) {
   container.replaceChildren();
@@ -7,11 +9,10 @@ export function renderForgotPassword(container) {
   const form = document.createElement("form");
   form.className = "auth-form";
 
-  const title = document.createElement("h1");
-  title.textContent = "Mot de passe oublié";
-  form.append(title);
+  form.append(createAccentTitle("Mot de passe oublié"));
 
   const hint = document.createElement("p");
+  hint.className = "auth-hint";
   hint.textContent =
     "Entrez votre adresse e-mail. Si un compte existe, vous recevrez un lien de réinitialisation.";
   form.append(hint);
@@ -35,7 +36,8 @@ export function renderForgotPassword(container) {
 
   const submitBtn = document.createElement("button");
   submitBtn.type = "submit";
-  submitBtn.textContent = "Envoyer le lien";
+  submitBtn.className = "btn btn-primary btn-full";
+  submitBtn.textContent = "Valider";
 
   const backLink = document.createElement("a");
   backLink.href = "/login";
@@ -47,7 +49,7 @@ export function renderForgotPassword(container) {
   });
 
   form.append(emailLabel, errorEl, successEl, submitBtn, backLink);
-  container.append(form);
+  container.append(wrapAuthPage(form));
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();

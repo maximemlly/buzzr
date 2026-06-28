@@ -4,6 +4,7 @@ const quizModel = require("../models/quizModel");
 const userModel = require("../models/userModel");
 const roomManager = require("./roomManager");
 const { computeSpeedPoints } = require("../utils/scoring");
+const { finalizeGameStats } = require("./finalizeGame");
 
 const QUIZ_OWNER_BLOCK_MESSAGE =
   "Vous êtes le créateur de ce quiz. Pour éviter toute triche, vous ne pouvez pas rejoindre une partie lancée par un autre joueur sur votre propre quiz. Lancez votre propre partie depuis le dashboard si vous souhaitez l'animer.";
@@ -66,6 +67,9 @@ function endQuestion(io, room) {
   if (room.currentQuestionIndex >= room.quiz.questions.length) {
     room.status = "finished";
     sessionModel.updateStatus(room.sessionId, "finished");
+    finalizeGameStats(room).catch((err) => {
+      console.error("finalizeGameStats:", err);
+    });
     io.to(room.code).emit("game_finished", {
       leaderboard: roomManager.getLeaderboard(room),
     });
@@ -149,6 +153,7 @@ async function addParticipantToRoom(io, socket, room, tokenUser, { skipHostCheck
     score: participant.score,
     participantId: participant.id,
     tieBreaker: 0,
+    correctAnswers: 0,
   });
 
   if (!socket.rooms.has(room.code)) {
@@ -166,6 +171,7 @@ async function registerPlayer(io, socket, room, tokenUser) {
   const added = await addParticipantToRoom(io, socket, room, tokenUser);
   if (!added) return;
 
+  socket.emit("session_joined", { isHost: false });
   emitSessionUpdate(io, room);
 }
 
@@ -293,6 +299,7 @@ function registerGameHandler(io) {
             });
           }
 
+          socket.emit("session_joined", { isHost: true });
           emitSessionUpdate(io, room);
           return;
         }
@@ -373,9 +380,12 @@ function registerGameHandler(io) {
 
         room.answersReceived.add(socket.id);
 
-        const earnsPoints =
-          canUserEarnPoints(room, player.userId) &&
-          Number(answer.is_correct) === 1;
+        const isCorrect = Number(answer.is_correct) === 1;
+        if (isCorrect && canUserEarnPoints(room, player.userId)) {
+          player.correctAnswers = (player.correctAnswers ?? 0) + 1;
+        }
+
+        const earnsPoints = isCorrect && canUserEarnPoints(room, player.userId);
 
         if (earnsPoints) {
           const durationMs =

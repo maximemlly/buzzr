@@ -1,8 +1,9 @@
 import { getMe } from "../services/api.js";
 import { connectSocket, disconnectSocket } from "../services/socket.js";
 import { navigateTo, setActiveLobby, leaveLobby, clearLobbySession } from "../utils/navigation.js";
-import { renderGameResults } from "../components/gameResults.js";
+import { renderGameResults, fillPodiumList } from "../components/gameResults.js";
 import { showBlockedDialog } from "../utils/blockedDialog.js";
+import { createAppPage } from "../components/appLayout.js";
 
 function renderLobbyPlayers(listEl, hostBannerEl, { host, participants }) {
   hostBannerEl.replaceChildren();
@@ -64,13 +65,8 @@ function renderLobbyPlayers(listEl, hostBannerEl, { host, participants }) {
   }
 }
 
-function renderLeaderboard(listEl, leaderboard) {
-  listEl.replaceChildren();
-  leaderboard.forEach((entry, index) => {
-    const li = document.createElement("li");
-    li.textContent = `${index + 1}. ${entry.nickname} — ${entry.score} pts`;
-    listEl.append(li);
-  });
+function renderLeaderboard(listEl, leaderboard, { username, isHostViewer }) {
+  fillPodiumList(listEl, leaderboard, { username, isHostViewer });
 }
 
 export function renderLobby(container, code) {
@@ -78,18 +74,26 @@ export function renderLobby(container, code) {
   disconnectSocket();
   const socket = connectSocket();
 
-  const isHost = sessionStorage.getItem("lobbyRole") === "host";
+  const isHostHint = sessionStorage.getItem("lobbyRole") === "host";
+  let isHost = false;
   let hostCanPlay = false;
 
-  const section = document.createElement("section");
-  section.className = "dashboard";
+  const { page, main } = createAppPage({ showNav: false });
+
+  const hero = document.createElement("section");
+  hero.className = "hero";
 
   const title = document.createElement("h1");
   title.textContent = `Lobby — ${code}`;
 
   const statusEl = document.createElement("p");
-  statusEl.className = "quiz-empty";
+  statusEl.className = "hero-sub";
   statusEl.textContent = "Connexion…";
+
+  hero.append(title, statusEl);
+
+  const lobbyPanel = document.createElement("div");
+  lobbyPanel.className = "lobby-panel";
 
   const waitingBlock = document.createElement("div");
   waitingBlock.className = "waiting-block";
@@ -108,8 +112,9 @@ export function renderLobby(container, code) {
 
   const startBtn = document.createElement("button");
   startBtn.type = "button";
+  startBtn.className = "btn btn-launch";
   startBtn.textContent = "Démarrer la partie";
-  startBtn.hidden = !isHost;
+  startBtn.hidden = true;
 
   const gameArea = document.createElement("div");
   gameArea.className = "game-area";
@@ -132,31 +137,41 @@ export function renderLobby(container, code) {
   const scoreTitle = document.createElement("h2");
   scoreTitle.textContent = "Classement";
 
-  const scoreList = document.createElement("ul");
-  scoreList.className = "quiz-list";
+  const scoreMessageEl = document.createElement("p");
+  scoreMessageEl.className = "scores-interim-message";
+  scoreMessageEl.hidden = true;
 
-  scoreBlock.append(scoreTitle, scoreList);
+  const scoreList = document.createElement("ol");
+  scoreList.className = "results-podium";
+
+  scoreBlock.append(scoreTitle, scoreMessageEl, scoreList);
 
   const backBtn = document.createElement("button");
   backBtn.type = "button";
-  backBtn.textContent = "Quitter";
+  backBtn.className = "btn btn-secondary";
+  backBtn.textContent = "Quitter la partie";
   backBtn.addEventListener("click", leaveGame);
 
   gameArea.append(questionLabel, timerEl, answersEl, resultEl);
-  section.append(
-    title,
-    statusEl,
-    waitingBlock,
-    startBtn,
-    gameArea,
-    scoreBlock,
-    backBtn,
-  );
-  container.append(section);
+  lobbyPanel.append(waitingBlock, startBtn, gameArea, scoreBlock, backBtn);
+  main.append(hero, lobbyPanel);
+  container.append(page);
 
   let timerInterval = null;
   let hasAnswered = false;
   let currentUsername = "";
+
+  function setScoresLayout(active) {
+    hero.hidden = active;
+    backBtn.hidden = active;
+    startBtn.hidden = true;
+    waitingBlock.hidden = true;
+    gameArea.hidden = true;
+    scoreBlock.hidden = !active;
+    scoreMessageEl.hidden = !active;
+    main.classList.toggle("app-main--centered", active);
+    page.classList.toggle("lobby-scores-view", active);
+  }
 
   function leaveGame() {
     socket.emit("leave_lobby");
@@ -171,18 +186,22 @@ export function renderLobby(container, code) {
     }
   }
 
+  function updateStartButton() {
+    startBtn.hidden = !isHost || !gameArea.hidden;
+  }
+
   function showWaiting() {
+    setScoresLayout(false);
     waitingBlock.hidden = false;
-    startBtn.hidden = !isHost;
     gameArea.hidden = true;
-    scoreBlock.hidden = true;
+    updateStartButton();
   }
 
   function showQuestion(data) {
+    setScoresLayout(false);
     waitingBlock.hidden = true;
-    startBtn.hidden = true;
-    scoreBlock.hidden = true;
     gameArea.hidden = false;
+    updateStartButton();
     resultEl.hidden = true;
     answersEl.replaceChildren();
     hasAnswered = false;
@@ -226,13 +245,14 @@ export function renderLobby(container, code) {
   }
 
   function showScores(leaderboard, message) {
-    waitingBlock.hidden = true;
-    gameArea.hidden = false;
-    answersEl.replaceChildren();
-    resultEl.hidden = false;
-    resultEl.textContent = message;
-    scoreBlock.hidden = false;
-    renderLeaderboard(scoreList, leaderboard);
+    setScoresLayout(true);
+    scoreMessageEl.textContent = message;
+    scoreTitle.textContent =
+      isHost && !hostCanPlay ? "Classement des joueurs" : "Classement";
+    renderLeaderboard(scoreList, leaderboard, {
+      username: currentUsername,
+      isHostViewer: isHost && !hostCanPlay,
+    });
   }
 
   function expelFromLobby(message, { title = "Accès refusé", variant = "error" } = {}) {
@@ -245,6 +265,16 @@ export function renderLobby(container, code) {
       onClose: () => navigateTo("/dashboard", { replace: true }),
     });
   }
+
+  socket.on("session_joined", ({ isHost: hostRole }) => {
+    isHost = Boolean(hostRole);
+    if (isHost) {
+      sessionStorage.setItem("lobbyRole", "host");
+    } else {
+      sessionStorage.removeItem("lobbyRole");
+    }
+    updateStartButton();
+  });
 
   socket.on("join_denied", ({ message }) => {
     expelFromLobby(message);
@@ -288,7 +318,7 @@ export function renderLobby(container, code) {
     hostCanPlay = Boolean(canPlay);
     statusEl.textContent = `${quizTitle} — ${questionCount} question(s)`;
     waitingBlock.hidden = true;
-    startBtn.hidden = true;
+    updateStartButton();
   });
 
   socket.on("question_started", (data) => {
@@ -302,15 +332,18 @@ export function renderLobby(container, code) {
 
   socket.on("game_finished", ({ leaderboard }) => {
     clearTimer();
-    socket.emit("leave_lobby");
-    disconnectSocket();
-    clearLobbySession();
     renderGameResults(container, {
       leaderboard,
       username: currentUsername,
       isHost: isHost && !hostCanPlay,
-      onLeave: () => leaveLobby("/dashboard"),
+      onLeave: () => {
+        disconnectSocket();
+        leaveLobby("/dashboard");
+      },
     });
+    socket.emit("leave_lobby");
+    disconnectSocket();
+    clearLobbySession();
   });
 
   async function joinLobby() {
@@ -318,14 +351,15 @@ export function renderLobby(container, code) {
     currentUsername = user.username;
     socket.emit("join_session", {
       code,
-      role: isHost ? "host" : "player",
+      role: isHostHint ? "host" : "player",
     });
-    if (!isHost) {
+    if (!isHostHint) {
       statusEl.textContent = `Connecté en tant que ${user.username}`;
     }
   }
 
   startBtn.addEventListener("click", () => {
+    if (!isHost) return;
     socket.emit("host_start_game");
   });
 

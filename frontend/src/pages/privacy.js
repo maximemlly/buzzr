@@ -1,8 +1,11 @@
 import { PRIVACY_POLICY } from "../content/privacyPolicy.js";
 import { navigateTo } from "../utils/navigation.js";
+import { createAppPage } from "../components/appLayout.js";
 
 export function renderPrivacy(container) {
   container.replaceChildren();
+
+  const { page, main } = createAppPage();
 
   const article = document.createElement("article");
   article.className = "legal-page";
@@ -19,7 +22,8 @@ export function renderPrivacy(container) {
 
   const backBtn = document.createElement("button");
   backBtn.type = "button";
-  backBtn.textContent = "Retour";
+  backBtn.className = "btn btn-secondary";
+  backBtn.textContent = "← Retour";
   backBtn.addEventListener("click", () => {
     if (window.history.length > 1) {
       history.back();
@@ -53,5 +57,6 @@ export function renderPrivacy(container) {
     article.append(sectionEl);
   }
 
-  container.append(article);
+  main.append(article);
+  container.append(page);
 }

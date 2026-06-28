@@ -1,5 +1,7 @@
 import { getPublicQuizzes, createSession, getMe } from "../services/api.js";
 import { navigateTo, setActiveLobby } from "../utils/navigation.js";
+import { createAppPage } from "../components/appLayout.js";
+import { createSectionTitle } from "../components/accentTitle.js";
 
 const PAGE_SIZE = 20;
 const SEARCH_DEBOUNCE_MS = 350;
@@ -29,7 +31,7 @@ function createQuizCard(quiz, errorEl, currentUserId) {
 
   const launchBtn = document.createElement("button");
   launchBtn.type = "button";
-  launchBtn.className = "btn-launch";
+  launchBtn.className = "btn btn-launch";
   launchBtn.textContent = "Lancer une partie";
   launchBtn.addEventListener("click", async () => {
     launchBtn.disabled = true;
@@ -60,21 +62,13 @@ function createQuizCard(quiz, errorEl, currentUserId) {
 export function renderExplore(container) {
   container.replaceChildren();
 
-  const section = document.createElement("section");
-  section.className = "explore";
+  const { page, main } = createAppPage({ activeNav: "explore" });
 
-  const header = document.createElement("div");
-  header.className = "explore-header";
+  const panel = document.createElement("section");
+  panel.className = "panel-card explore-panel";
 
-  const title = document.createElement("h1");
-  title.textContent = "Quiz publics";
-
-  const backBtn = document.createElement("button");
-  backBtn.type = "button";
-  backBtn.textContent = "Retour au dashboard";
-  backBtn.addEventListener("click", () => navigateTo("/dashboard"));
-
-  header.append(title, backBtn);
+  const panelTitle = createSectionTitle("Quiz publics");
+  panel.append(panelTitle);
 
   const searchForm = document.createElement("form");
   searchForm.className = "explore-search";
@@ -110,8 +104,9 @@ export function renderExplore(container) {
   errorEl.className = "error";
   errorEl.hidden = true;
 
-  section.append(header, searchForm, listEl, footer, errorEl);
-  container.append(section);
+  panel.append(searchForm, listEl, footer, errorEl);
+  main.append(panel);
+  container.append(page);
 
   let offset = 0;
   let total = 0;

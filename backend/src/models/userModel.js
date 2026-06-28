@@ -100,6 +100,37 @@ async function updateUsername(userId, username) {
   await pool.execute('UPDATE users SET username = ? WHERE id = ?', [username, userId]);
 }
 
+async function getEloRating(userId) {
+  const [rows] = await pool.execute(
+    'SELECT elo_rating FROM users WHERE id = ?',
+    [userId],
+  );
+  return rows[0]?.elo_rating ?? 1000;
+}
+
+async function getEloRatings(userIds) {
+  if (!userIds.length) return new Map();
+
+  const placeholders = userIds.map(() => '?').join(', ');
+  const [rows] = await pool.execute(
+    `SELECT id, elo_rating FROM users WHERE id IN (${placeholders})`,
+    userIds,
+  );
+
+  const map = new Map();
+  for (const row of rows) {
+    map.set(Number(row.id), Number(row.elo_rating));
+  }
+  return map;
+}
+
+async function updateElo(userId, eloRating) {
+  await pool.execute('UPDATE users SET elo_rating = ? WHERE id = ?', [
+    eloRating,
+    userId,
+  ]);
+}
+
 module.exports = {
   findByEmail,
   findByUsername,
@@ -114,4 +145,7 @@ module.exports = {
   setResetToken,
   updatePassword,
   updateUsername,
+  getEloRating,
+  getEloRatings,
+  updateElo,
 };
