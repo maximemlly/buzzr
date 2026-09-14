@@ -1,10 +1,11 @@
 const { Server } = require("socket.io");
+const { getAllowedOrigins } = require("./cors");
 const registerGameHandler = require("../sockets/gameHandler");
 
 function initSocket(httpServer) {
   const io = new Server(httpServer, {
     cors: {
-      origin: process.env.CORS_ORIGIN,
+      origin: getAllowedOrigins(),
       methods: ["GET", "POST"],
     },
   });

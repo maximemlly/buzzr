@@ -3,6 +3,7 @@ require("dotenv").config();
 const http = require("http");
 const express = require("express");
 const cors = require("cors");
+const { getAllowedOrigins } = require("./src/config/cors");
 const pool = require("./src/config/db");
 const initSocket = require("./src/config/socket");
 const authRoutes = require("./src/routes/auth");
@@ -14,7 +15,7 @@ const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
 
-app.use(cors({ origin: process.env.CORS_ORIGIN }));
+app.use(cors({ origin: getAllowedOrigins() }));
 app.use(express.json());
 
 app.get("/api/health", (_req, res) => {
