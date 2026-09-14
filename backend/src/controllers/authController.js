@@ -3,6 +3,10 @@ const jwt = require('jsonwebtoken');
 const userModel = require('../models/userModel');
 const { sendMail } = require('../config/mailer');
 const { generateToken, expiresInHours } = require('../utils/tokens');
+const {
+  getVerificationEmailHtml,
+  getResetEmailHtml,
+} = require('../utils/emailTemplates');
 
 const SALT_ROUNDS = 10;
 const TOKEN_EXPIRES_IN = '7d';
@@ -51,8 +55,12 @@ async function sendVerificationEmail(user, token) {
   await sendMail({
     to: user.email,
     subject: 'Confirmez votre adresse e-mail — Buzzr',
-    text: `Bonjour ${user.username},\n\nCliquez sur ce lien pour confirmer votre compte :\n${link}\n\nCe lien expire dans ${VERIFICATION_EXPIRES_HOURS} heures.`,
-    html: `<p>Bonjour <strong>${user.username}</strong>,</p><p><a href="${link}">Confirmer mon compte</a></p><p>Ce lien expire dans ${VERIFICATION_EXPIRES_HOURS} heures.</p>`,
+    text: `Bonjour ${user.username},\n\nBienvenue sur Buzzr ! Cliquez sur ce lien pour confirmer votre compte :\n${link}\n\nCe lien expire dans ${VERIFICATION_EXPIRES_HOURS} heures.`,
+    html: getVerificationEmailHtml({
+      username: user.username,
+      link,
+      expireHours: VERIFICATION_EXPIRES_HOURS,
+    }),
   });
 }
 
@@ -62,7 +70,11 @@ async function sendResetEmail(user, token) {
     to: user.email,
     subject: 'Réinitialisation de mot de passe — Buzzr',
     text: `Bonjour ${user.username},\n\nCliquez sur ce lien pour choisir un nouveau mot de passe :\n${link}\n\nCe lien expire dans ${RESET_EXPIRES_HOURS} heure.`,
-    html: `<p>Bonjour <strong>${user.username}</strong>,</p><p><a href="${link}">Réinitialiser mon mot de passe</a></p><p>Ce lien expire dans ${RESET_EXPIRES_HOURS} heure.</p>`,
+    html: getResetEmailHtml({
+      username: user.username,
+      link,
+      expireHours: RESET_EXPIRES_HOURS,
+    }),
   });
 }
 
