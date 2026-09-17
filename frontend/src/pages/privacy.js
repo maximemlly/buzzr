@@ -1,6 +1,7 @@
 import { PRIVACY_POLICY } from "../content/privacyPolicy.js";
 import { navigateTo } from "../utils/navigation.js";
 import { createAppPage } from "../components/appLayout.js";
+import { createBackLink } from "../components/backLink.js";
 
 export function renderPrivacy(container) {
   container.replaceChildren();
@@ -20,19 +21,16 @@ export function renderPrivacy(container) {
   updated.className = "legal-updated";
   updated.textContent = `Dernière mise à jour : ${PRIVACY_POLICY.lastUpdated}`;
 
-  const backBtn = document.createElement("button");
-  backBtn.type = "button";
-  backBtn.className = "btn btn-secondary";
-  backBtn.textContent = "← Retour";
-  backBtn.addEventListener("click", () => {
-    if (window.history.length > 1) {
-      history.back();
-    } else {
-      navigateTo("/login");
-    }
+  const backLink = createBackLink({
+    to: "/login",
+    label: "Retour",
+    onClick: () => {
+      if (window.history.length > 1) history.back();
+      else navigateTo("/login");
+    },
   });
 
-  header.append(title, updated, backBtn);
+  header.append(backLink, title, updated);
   article.append(header);
 
   const intro = document.createElement("p");

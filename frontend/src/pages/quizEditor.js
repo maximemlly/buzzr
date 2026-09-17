@@ -4,11 +4,12 @@ import {
   deleteQuestion,
   updateQuiz,
 } from "../services/api.js";
-import { navigateTo } from "../utils/navigation.js";
 import { createAppPage } from "../components/appLayout.js";
+import { createBackLink } from "../components/backLink.js";
 
-async function renderQuestions(quiz, listEl, errorEl) {
+async function renderQuestions(quiz, listEl, errorEl, countEl) {
   listEl.replaceChildren();
+  if (countEl) countEl.textContent = String(quiz.questions.length);
 
   if (quiz.questions.length === 0) {
     const empty = document.createElement("p");
@@ -18,32 +19,59 @@ async function renderQuestions(quiz, listEl, errorEl) {
     return;
   }
 
-  for (const question of quiz.questions) {
+  quiz.questions.forEach((question, index) => {
     const li = document.createElement("li");
+    li.className = "question-card";
 
-    const label = document.createElement("span");
+    const num = document.createElement("span");
+    num.className = "question-num";
+    num.textContent = String(index + 1);
+
+    const body = document.createElement("div");
+    body.className = "question-body";
+
+    const label = document.createElement("p");
+    label.className = "question-label";
     label.textContent = question.label;
+
+    const meta = document.createElement("p");
+    meta.className = "question-meta";
+    const answers = question.answers ?? [];
+    const correct = answers.find((a) => a.is_correct);
+    meta.textContent = `${question.timer_seconds ?? 20}s · ${answers.length} réponses`;
+    if (correct) {
+      meta.append(" · ");
+      const ok = document.createElement("span");
+      ok.className = "question-correct";
+      ok.textContent = `✓ ${correct.label}`;
+      meta.append(ok);
+    }
+
+    body.append(label, meta);
 
     const deleteBtn = document.createElement("button");
     deleteBtn.type = "button";
-    deleteBtn.className = "btn btn-danger btn-sm";
+    deleteBtn.className = "btn btn-ghost-danger btn-sm";
     deleteBtn.textContent = "Supprimer";
+    deleteBtn.setAttribute("aria-label", `Supprimer la question ${index + 1}`);
     deleteBtn.addEventListener("click", async () => {
-      if (!confirm("Supprimer cette question ?")) return;
+      if (!confirm(`Supprimer la question « ${question.label} » ?`)) return;
 
+      deleteBtn.disabled = true;
       try {
         await deleteQuestion(quiz.id, question.id);
         const data = await getQuiz(quiz.id);
-        await renderQuestions(data.quiz, listEl, errorEl);
+        await renderQuestions(data.quiz, listEl, errorEl, countEl);
       } catch (err) {
+        deleteBtn.disabled = false;
         errorEl.textContent = err.message;
         errorEl.hidden = false;
       }
     });
 
-    li.append(label, deleteBtn);
+    li.append(num, body, deleteBtn);
     listEl.append(li);
-  }
+  });
 }
 
 export function renderQuizEditor(container, quizId) {
@@ -62,6 +90,12 @@ export function renderQuizEditor(container, quizId) {
   heroSub.textContent = "Modifiez les paramètres et ajoutez des questions";
 
   hero.append(heading, heroSub);
+
+  const notice = document.createElement("p");
+  notice.className = "notice notice--warning";
+  notice.setAttribute("role", "note");
+  notice.textContent =
+    "Un quiz public doit contenir au moins une question. En tant que créateur, vous ne pourrez jamais marquer de points sur vos propres quiz.";
 
   const settingsForm = document.createElement("form");
   settingsForm.className = "account-settings-block quiz-settings";
@@ -84,19 +118,23 @@ export function renderQuizEditor(container, quizId) {
   descField.append(descInput);
 
   const publishLabel = document.createElement("label");
-  publishLabel.className = "consent-label";
+  publishLabel.className = "publish-toggle";
   const publishCheckbox = document.createElement("input");
   publishCheckbox.type = "checkbox";
   publishCheckbox.name = "is_published";
+  publishCheckbox.className = "publish-toggle-input";
+  const publishSwitch = document.createElement("span");
+  publishSwitch.className = "publish-toggle-switch";
+  publishSwitch.setAttribute("aria-hidden", "true");
   const publishText = document.createElement("span");
-  publishText.textContent =
-    "Rendre ce quiz public (visible dans l'explorateur et jouable par d'autres utilisateurs)";
-  publishLabel.append(publishCheckbox, publishText);
-
-  const publishHint = document.createElement("p");
-  publishHint.className = "auth-hint";
-  publishHint.textContent =
-    "Un quiz public doit contenir au moins une question. En tant que créateur, vous ne pourrez jamais marquer de points sur vos propres quiz.";
+  publishText.className = "publish-toggle-text";
+  const publishTitle = document.createElement("strong");
+  publishTitle.textContent = "Rendre ce quiz public";
+  const publishDesc = document.createElement("span");
+  publishDesc.textContent =
+    "Visible dans l'explorateur et jouable par les autres utilisateurs";
+  publishText.append(publishTitle, publishDesc);
+  publishLabel.append(publishCheckbox, publishSwitch, publishText);
 
   const settingsError = document.createElement("p");
   settingsError.className = "error";
@@ -111,64 +149,90 @@ export function renderQuizEditor(container, quizId) {
     titleField,
     descField,
     publishLabel,
-    publishHint,
     settingsError,
     saveSettingsBtn,
   );
 
+  const questionsSection = document.createElement("section");
+  questionsSection.className = "questions-section";
+
+  const questionsHeader = document.createElement("div");
+  questionsHeader.className = "questions-header";
   const questionsTitle = document.createElement("h2");
   questionsTitle.className = "quiz-section-title";
   questionsTitle.textContent = "Questions";
+  const questionsCount = document.createElement("span");
+  questionsCount.className = "questions-count";
+  questionsCount.textContent = "0";
+  questionsHeader.append(questionsTitle, questionsCount);
 
   const questionsList = document.createElement("ul");
   questionsList.className = "quiz-list";
 
   const addForm = document.createElement("form");
-  addForm.className = "account-settings-block panel-form";
+  addForm.className = "account-settings-block add-question-form";
 
   const formTitle = document.createElement("h2");
   formTitle.textContent = "Ajouter une question";
-  addForm.append(formTitle);
+  const formHint = document.createElement("p");
+  formHint.className = "auth-hint add-question-hint";
+  formHint.textContent =
+    "Renseignez au moins 2 réponses et cochez la bonne.";
+  addForm.append(formTitle, formHint);
+
+  const mainRow = document.createElement("div");
+  mainRow.className = "add-question-row";
 
   const labelField = document.createElement("label");
   labelField.textContent = "Question";
   const labelInput = document.createElement("input");
   labelInput.type = "text";
   labelInput.required = true;
+  labelInput.placeholder = "Ex. Quelle est la capitale de l'Australie ?";
   labelField.append(labelInput);
 
   const timerField = document.createElement("label");
-  timerField.textContent = "Durée (secondes)";
+  timerField.className = "add-question-timer";
+  timerField.textContent = "Durée (s)";
   const timerInput = document.createElement("input");
   timerInput.type = "number";
   timerInput.min = "5";
+  timerInput.max = "120";
   timerInput.value = "20";
   timerField.append(timerInput);
 
-  const answersWrap = document.createElement("div");
+  mainRow.append(labelField, timerField);
+
+  const answersWrap = document.createElement("fieldset");
   answersWrap.className = "answers-wrap";
+  const answersLegend = document.createElement("legend");
+  answersLegend.textContent = "Réponses";
+  answersWrap.append(answersLegend);
 
   const answerFields = [];
   for (let i = 0; i < 4; i++) {
-    const row = document.createElement("label");
+    const row = document.createElement("div");
     row.className = "answer-row";
-    row.textContent = `Réponse ${i + 1}`;
+    row.style.setProperty("--answer-color", `var(--answer-${i + 1})`);
 
     const textInput = document.createElement("input");
     textInput.type = "text";
+    textInput.placeholder = i < 2 ? `Réponse ${i + 1}` : `Réponse ${i + 1} (optionnelle)`;
+    textInput.setAttribute("aria-label", `Réponse ${i + 1}`);
     if (i < 2) textInput.required = true;
 
+    const correctLabel = document.createElement("label");
+    correctLabel.className = "correct-label";
     const radio = document.createElement("input");
     radio.type = "radio";
     radio.name = "correct-answer";
     radio.value = String(i);
     if (i === 0) radio.checked = true;
+    const correctText = document.createElement("span");
+    correctText.textContent = "Bonne réponse";
+    correctLabel.append(radio, correctText);
 
-    const correctLabel = document.createElement("span");
-    correctLabel.textContent = "Correcte";
-    correctLabel.className = "correct-label";
-
-    row.append(textInput, correctLabel, radio);
+    row.append(textInput, correctLabel);
     answersWrap.append(row);
     answerFields.push({ textInput, radio });
   }
@@ -182,17 +246,11 @@ export function renderQuizEditor(container, quizId) {
   submitBtn.className = "btn btn-primary";
   submitBtn.textContent = "Ajouter la question";
 
-  const backLink = document.createElement("a");
-  backLink.href = "/dashboard";
-  backLink.className = "auth-link";
-  backLink.textContent = "← Retour au dashboard";
-  backLink.addEventListener("click", (e) => {
-    e.preventDefault();
-    navigateTo("/dashboard");
-  });
+  const backLink = createBackLink({ to: "/quizzes", label: "Retour à mes quiz" });
 
-  addForm.append(labelField, timerField, answersWrap, errorEl, submitBtn);
-  main.append(hero, settingsForm, questionsTitle, questionsList, addForm, backLink);
+  addForm.append(mainRow, answersWrap, errorEl, submitBtn);
+  questionsSection.append(questionsHeader, questionsList, addForm);
+  main.append(backLink, hero, notice, settingsForm, questionsSection);
   container.append(page);
 
   let currentQuiz = null;
@@ -204,7 +262,7 @@ export function renderQuizEditor(container, quizId) {
       titleInput.value = currentQuiz.title;
       descInput.value = currentQuiz.description ?? "";
       publishCheckbox.checked = Boolean(currentQuiz.is_published);
-      return renderQuestions(currentQuiz, questionsList, errorEl);
+      return renderQuestions(currentQuiz, questionsList, errorEl, questionsCount);
     })
     .catch((err) => {
       errorEl.textContent = err.message;
@@ -264,7 +322,8 @@ export function renderQuizEditor(container, quizId) {
 
       const data = await getQuiz(quizId);
       currentQuiz = data.quiz;
-      await renderQuestions(currentQuiz, questionsList, errorEl);
+      await renderQuestions(currentQuiz, questionsList, errorEl, questionsCount);
+      labelInput.focus();
     } catch (err) {
       errorEl.textContent = err.message;
       errorEl.hidden = false;

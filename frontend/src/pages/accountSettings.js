@@ -7,6 +7,7 @@ import {
 } from "../services/api.js";
 import { navigateTo } from "../utils/navigation.js";
 import { createAppPage } from "../components/appLayout.js";
+import { createBackLink } from "../components/backLink.js";
 
 export function renderAccountSettings(container) {
   container.replaceChildren();
@@ -25,11 +26,7 @@ export function renderAccountSettings(container) {
 
   hero.append(title, sub);
 
-  const backBtn = document.createElement("button");
-  backBtn.type = "button";
-  backBtn.className = "btn btn-secondary";
-  backBtn.textContent = "← Retour au dashboard";
-  backBtn.addEventListener("click", () => navigateTo("/dashboard"));
+  const backLink = createBackLink();
 
   const emailBlock = document.createElement("div");
   emailBlock.className = "account-settings-block";
@@ -138,7 +135,7 @@ export function renderAccountSettings(container) {
     passwordSubmit,
   );
 
-  main.append(hero, backBtn, emailBlock, usernameForm, passwordForm);
+  main.append(backLink, hero, emailBlock, usernameForm, passwordForm);
   container.append(page);
 
   getMe()

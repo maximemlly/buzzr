@@ -31,7 +31,7 @@ export function renderRegister(container) {
   });
 
   const consentLabel = document.createElement("label");
-  consentLabel.className = "consent-label";
+  consentLabel.className = "consent-label consent-label--centered";
   const consentInput = document.createElement("input");
   consentInput.type = "checkbox";
   consentInput.name = "privacyConsent";

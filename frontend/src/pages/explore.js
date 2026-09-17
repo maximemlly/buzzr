@@ -15,16 +15,38 @@ function createQuizCard(quiz, errorEl, currentUserId) {
   const card = document.createElement("article");
   card.className = "explore-card";
 
+  const head = document.createElement("div");
+  head.className = "explore-card-head";
+
   const title = document.createElement("h2");
   title.textContent = quiz.title;
+  head.append(title);
+
+  const isOwner = currentUserId && Number(quiz.author_id) === Number(currentUserId);
+  if (isOwner) {
+    const badge = document.createElement("span");
+    badge.className = "explore-badge";
+    badge.textContent = "Votre quiz";
+    head.append(badge);
+  }
 
   const meta = document.createElement("p");
   meta.className = "explore-meta";
-  meta.textContent = `Par ${quiz.author_username} · ${quiz.question_count} question${quiz.question_count > 1 ? "s" : ""} · ${formatDate(quiz.created_at)}`;
+  const metaItems = [
+    `Par ${quiz.author_username}`,
+    `${quiz.question_count} question${quiz.question_count > 1 ? "s" : ""}`,
+    formatDate(quiz.created_at),
+  ];
+  for (const text of metaItems) {
+    const item = document.createElement("span");
+    item.textContent = text;
+    meta.append(item);
+  }
 
   const desc = document.createElement("p");
   desc.className = "explore-desc";
   desc.textContent = quiz.description?.trim() || "Aucune description.";
+  if (!quiz.description?.trim()) desc.classList.add("explore-desc--empty");
 
   const actions = document.createElement("div");
   actions.className = "explore-actions";
@@ -47,15 +69,15 @@ function createQuizCard(quiz, errorEl, currentUserId) {
     }
   });
 
-  if (currentUserId && Number(quiz.author_id) === Number(currentUserId)) {
+  if (isOwner) {
     const ownerNote = document.createElement("span");
     ownerNote.className = "explore-owner-note";
-    ownerNote.textContent = "Votre quiz — vous ne pourrez pas marquer de points.";
+    ownerNote.textContent = "Vous ne pourrez pas marquer de points sur votre propre quiz.";
     actions.append(ownerNote);
   }
 
   actions.append(launchBtn);
-  card.append(title, meta, desc, actions);
+  card.append(head, meta, desc, actions);
   return card;
 }
 
@@ -73,14 +95,25 @@ export function renderExplore(container) {
   const searchForm = document.createElement("form");
   searchForm.className = "explore-search";
 
+  searchForm.setAttribute("role", "search");
+
   const searchLabel = document.createElement("label");
-  searchLabel.textContent = "Rechercher";
+  searchLabel.className = "sr-only";
+  searchLabel.htmlFor = "explore-search-input";
+  searchLabel.textContent = "Rechercher un quiz public";
+
+  const searchField = document.createElement("div");
+  searchField.className = "explore-search-field";
+  searchField.innerHTML =
+    '<svg class="explore-search-icon" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="9" r="5.5"/><path d="m13.5 13.5 3.5 3.5"/></svg>';
+
   const searchInput = document.createElement("input");
+  searchInput.id = "explore-search-input";
   searchInput.type = "search";
-  searchInput.placeholder = "Titre, description ou auteur…";
+  searchInput.placeholder = "Rechercher par titre, description ou auteur…";
   searchInput.autocomplete = "off";
-  searchLabel.append(searchInput);
-  searchForm.append(searchLabel);
+  searchField.append(searchInput);
+  searchForm.append(searchLabel, searchField);
 
   const listEl = document.createElement("div");
   listEl.className = "explore-list";
@@ -89,7 +122,7 @@ export function renderExplore(container) {
   footer.className = "admin-load-footer";
 
   const statusEl = document.createElement("p");
-  statusEl.className = "admin-load-status";
+  statusEl.className = "admin-load-status explore-status";
   statusEl.textContent = "Chargement…";
 
   const loadMoreBtn = document.createElement("button");
@@ -116,9 +149,10 @@ export function renderExplore(container) {
   let currentUserId = null;
 
   function updateStatus(loadedCount) {
+    statusEl.classList.toggle("explore-status--empty", total === 0);
     if (total === 0) {
       statusEl.textContent = searchQuery
-        ? "Aucun quiz public ne correspond à votre recherche."
+        ? `Aucun quiz public ne correspond à « ${searchQuery} ».`
         : "Aucun quiz public pour l'instant.";
       loadMoreBtn.hidden = true;
       return;

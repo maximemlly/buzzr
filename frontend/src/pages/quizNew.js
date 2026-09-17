@@ -1,6 +1,7 @@
 import { createQuiz } from "../services/api.js";
 import { navigateTo } from "../utils/navigation.js";
 import { createAppPage } from "../components/appLayout.js";
+import { createBackLink } from "../components/backLink.js";
 
 export function renderQuizNew(container) {
   container.replaceChildren();
@@ -46,17 +47,10 @@ export function renderQuizNew(container) {
   submitBtn.className = "btn btn-primary";
   submitBtn.textContent = "Créer le quiz";
 
-  const backLink = document.createElement("a");
-  backLink.href = "/dashboard";
-  backLink.className = "auth-link";
-  backLink.textContent = "← Retour au dashboard";
-  backLink.addEventListener("click", (e) => {
-    e.preventDefault();
-    navigateTo("/dashboard");
-  });
+  const backLink = createBackLink({ to: "/quizzes", label: "Retour à mes quiz" });
 
-  form.append(titleLabel, descLabel, errorEl, submitBtn, backLink);
-  main.append(hero, form);
+  form.append(titleLabel, descLabel, errorEl, submitBtn);
+  main.append(backLink, hero, form);
   container.append(page);
 
   form.addEventListener("submit", async (e) => {

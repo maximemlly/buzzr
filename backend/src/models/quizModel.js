@@ -4,10 +4,11 @@ const pool = require("../config/db");
 
 async function findAllByUserId(userId) {
   const [rows] = await pool.execute(
-    `SELECT id, user_id, title, description, is_published, created_at
-     FROM quizzes
-     WHERE user_id = ?
-     ORDER BY created_at DESC`,
+    `SELECT q.id, q.user_id, q.title, q.description, q.is_published, q.created_at,
+            (SELECT COUNT(*) FROM questions qq WHERE qq.quiz_id = q.id) AS question_count
+     FROM quizzes q
+     WHERE q.user_id = ?
+     ORDER BY q.created_at DESC`,
     [userId],
   );
   return rows;

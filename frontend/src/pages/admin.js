@@ -12,6 +12,7 @@ import {
 import { navigateTo } from "../utils/navigation.js";
 import { createPrivacyLink } from "../components/privacyLink.js";
 import { createAppPage } from "../components/appLayout.js";
+import { createBackLink } from "../components/backLink.js";
 
 const PAGE_SIZE = 20;
 
@@ -319,11 +320,7 @@ export function renderAdmin(container) {
 
   hero.append(title, sub);
 
-  const backBtn = document.createElement("button");
-  backBtn.type = "button";
-  backBtn.className = "btn btn-secondary";
-  backBtn.textContent = "← Retour au dashboard";
-  backBtn.addEventListener("click", () => navigateTo("/dashboard"));
+  const backLink = createBackLink();
 
   const gdprNotice = document.createElement("p");
   gdprNotice.className = "admin-privacy";
@@ -347,7 +344,7 @@ export function renderAdmin(container) {
   errorEl.hidden = true;
 
   adminWrap.append(gdprNotice, privacyLink, tabs, panel, errorEl);
-  main.append(hero, backBtn, adminWrap);
+  main.append(backLink, hero, adminWrap);
   container.append(page);
 
   let activeTab = "users";
