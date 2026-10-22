@@ -4,6 +4,9 @@ const API_URL = import.meta.env.VITE_API_URL
 
 const TOKEN_KEY = "token";
 
+const UNAVAILABLE_MESSAGE =
+  "Service momentanément indisponible. Merci de réessayer dans quelques instants.";
+
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -27,13 +30,23 @@ async function request(path, options = {}) {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers,
-    body: options.body != null ? JSON.stringify(options.body) : undefined,
-  });
+  let response;
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers,
+      body: options.body != null ? JSON.stringify(options.body) : undefined,
+    });
+  } catch {
+    throw new Error(UNAVAILABLE_MESSAGE);
+  }
 
-  const data = await response.json();
+  // Une passerelle en panne (502/503) peut renvoyer du HTML au lieu de JSON
+  const data = await response.json().catch(() => ({}));
+
+  if (response.status >= 500) {
+    throw new Error(UNAVAILABLE_MESSAGE);
+  }
 
   if (!response.ok) {
     const err = new Error(data.message || "Erreur serveur");
